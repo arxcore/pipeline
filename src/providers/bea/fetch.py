@@ -58,7 +58,7 @@ class BEAProvider:
 
         # Check api key if not exists
         if not self.api_key:
-            raise exc.ResourceNotFound(f"{meta.api} apikey not found")
+            raise exc.ResourceNotFound(f"{meta.source} apikey not found")
 
         # build Start year and end year
         start_range = list(range(meta.start_year, datetime.now().year + 1))
@@ -69,7 +69,7 @@ class BEAProvider:
             "UserID": self.api_key,
             "method": "GetData",
             "DataSetName": "ITA",
-            "Indicator": meta.id,
+            "Indicator": meta.code_name,
             "AreaOrCountry": "AllCountries",
             "Year": start_to_end,
             "Frequency": meta.freq,

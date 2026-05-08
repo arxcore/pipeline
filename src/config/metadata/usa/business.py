@@ -1,7 +1,7 @@
 from config.constants import MOM, MONTHLY, SOURCE_FRED, UNIT_PERCENT
 
 US_BUSINESS = {
-    "US_Industrial_production_MoM": {
+    "Industrial_production_MoM": {
         "id": "INDPRO",
         "api": SOURCE_FRED,
         "calc": MOM,

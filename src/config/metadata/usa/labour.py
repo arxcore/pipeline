@@ -12,9 +12,9 @@ from config.constants import (
 from providers.bls.model import BLSConfigModel
 
 US_LABOUR: dict[str, BLSConfigModel] = {
-    "US_NFP": BLSConfigModel(
-        id="CES0000000001",
-        api=SOURCE_BLS,
+    "NFP": BLSConfigModel(
+        code_name="CES0000000001",
+        source=SOURCE_BLS,
         start_year=2024,
         start_month=2,
         calc=NET,
@@ -22,9 +22,9 @@ US_LABOUR: dict[str, BLSConfigModel] = {
         unit=UNIT_PEOPLE,
         description="Nonfarm Payrolls, Net Change",
     ),
-    "US_Unemployment": BLSConfigModel(
-        id="LNS14000000",
-        api=SOURCE_BLS,
+    "Unemployment": BLSConfigModel(
+        code_name="LNS14000000",
+        source=SOURCE_BLS,
         start_year=2024,
         start_month=3,
         calc=RAW,
@@ -32,9 +32,9 @@ US_LABOUR: dict[str, BLSConfigModel] = {
         unit=UNIT_PERCENT,
         description="Unemployment Rate",
     ),
-    "US_AverageHourlyEarnings": BLSConfigModel(
-        id="CES0500000003",
-        api=SOURCE_BLS,
+    "AverageHourlyEarnings": BLSConfigModel(
+        code_name="CES0500000003",
+        source=SOURCE_BLS,
         start_year=2024,
         start_month=2,
         calc=MOM,
@@ -44,7 +44,7 @@ US_LABOUR: dict[str, BLSConfigModel] = {
     ),
 }
 """
-    "US_InitialJoblessClaim": {
+    "InitialJoblessClaim": {
         "id": "ICSA",
         "api": SOURCE_FRED,
         "start_year": 2025,

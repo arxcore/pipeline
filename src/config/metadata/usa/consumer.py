@@ -4,9 +4,9 @@ from providers.fred.model import FREDConfigModel
 # UNIT_INDEX
 
 US_CONSUMER: dict[str, FREDConfigModel] = {
-    "US_Retail_Sales_MoM": FREDConfigModel(
-        id="RSXFS",
-        api=SOURCE_FRED,
+    "Retail_Sales_MoM": FREDConfigModel(
+        code_name="RSXFS",
+        source=SOURCE_FRED,
         calc=MOM,
         freq=MONTHLY,
         start_year=2024,
@@ -18,7 +18,7 @@ US_CONSUMER: dict[str, FREDConfigModel] = {
 
 # Acces Latter if Nedded
 """
-    "US_Michigan_Consumer_Sentiment": {
+    "Michigan_Consumer_Sentiment": {
         "id": "UMCSENT",
         "api": SOURCE_FRED,
         "calc": None,

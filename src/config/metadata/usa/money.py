@@ -4,9 +4,9 @@ from providers.fred import FREDConfigModel
 # UNIT_BILLION
 
 US_MONEY: dict[str, FREDConfigModel] = {
-    "US_Fed_Interest_Rate": FREDConfigModel(
-        id="FEDFUNDS",
-        api=SOURCE_FRED,
+    "Fed_Interest_Rate": FREDConfigModel(
+        code_name="FEDFUNDS",
+        source=SOURCE_FRED,
         calc=RAW,
         freq=MONTHLY,
         start_year=2024,
@@ -19,7 +19,7 @@ US_MONEY: dict[str, FREDConfigModel] = {
 
 # Acces Latter if Nedded
 """
-    "US_M2_Supply": {
+    "M2_Supply": {
         "id": "M2SL",
         "api": SOURCE_FRED,
         "calc": None,

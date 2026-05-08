@@ -53,13 +53,13 @@ class BLSProvider:
             async with self.semaphore:
                 # chekc api key
                 if not self.api_key:
-                    raise exc.ResourceNotFound(f"{meta.api} apikey not found")
+                    raise exc.ResourceNotFound(f"{meta.source} apikey not found")
                 # end year
                 end_year = datetime.now().year
 
                 # build payload
                 payload: dict[str, list[str] | str | int] = {
-                    "seriesid": [meta.id],
+                    "seriesid": [meta.code_name],
                     "apikey": self.api_key,
                     "startyear": meta.start_year,
                     "endyear": end_year,
@@ -88,10 +88,10 @@ class BLSProvider:
 
                         if data.get("status") != "REQUEST_SUCCEEDED":
                             msg = data.get("message", ["Unknown api error"])
-                            # TODO:
-                            # this is fake message Daily limit, verify real respons daily limit message
+                            # FIX:
+                            # batching requests
                             # if daily limit reched stop all request to bls server on Even loop and continue to next providers
-                            if "Your Daily Query Limit" in msg[0]:
+                            if "daily threshold" in msg[0]:
                                 raise exc.RateLimit("Daily limit reached")
                             raise exc.BLSRequestsError(
                                 msg[0] if msg else "Unknown api error"
@@ -101,7 +101,7 @@ class BLSProvider:
                         result = BLSRawResponsedata.model_validate(data).Results
                         logger.info(
                             "BLS raw data validation done..  %s data",
-                            len(result.series),
+                            len(result.series[0].data),
                         )
                         return result
 

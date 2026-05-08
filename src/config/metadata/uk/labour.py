@@ -1,46 +1,46 @@
 from config.constants import (
     MONTHLY,
-    PERCENT, 
-    SOURCE_LINKS,
-    YOY
-    # QUARTERLY, 
+    PERCENT,
+    SOURCE_URL,
+    YOY,
+    # QUARTERLY,
 )
 
 UK_LABOUR = {
-    "UK_Unemployment": {
+    "Unemployment": {
         "url": "https://www.ons.gov.uk/generator?format=csv&uri=/employmentandlabourmarket/peoplenotinwork/unemployment/timeseries/mgsx/lms",
         "freq": MONTHLY,
         "calc": None,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2024,
         "start_month": 3,
         "description": "Unemployment rate (aged 16 and over, seasonally adjusted): %",
     },
-    "UK_AvgEarnExcldBonus_YoY": {
+    "AvgEarnExcldBonus_YoY": {
         "url": "https://www.ons.gov.uk/file?uri=/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/averageweeklyearningsearn01/current/earn01jun2025.xls",
         "cdid": "KAC4",
         "freq": MONTHLY,
         "calc": YOY,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2023,
         "start_month": 3,
         "description": "AVERAGE EARNINGS EXCLUDING BONUS Dengan DataSet (EARN01)",
     },
-    "UK_Wage_Growth_YoY": {
+    "Wage_Growth_YoY": {
         "url": "https://www.ons.gov.uk/file?uri=/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/averageweeklyearningsearn01/current/earn01jun2025.xls",
         "cdid": "KAC6",
         "freq": MONTHLY,
         "calc": None,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2024,
         "start_month": 3,
         "description": "WageGrowth Dengan DataSet (EARN01)",
     },
-    "UK_Claim_Count_Change": {
+    "Claim_Count_Change": {
         "url": "https://www.ons.gov.uk/generator?format=csv&uri=/employmentandlabourmarket/peoplenotinwork/outofworkbenefits/timeseries/bcjd/unem",
         "freq": MONTHLY,
         "calc": PERCENT,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2024,
         "start_month": 3,
         "description": "Claimant Count : K02000001 UK : People : SA : Thousands",
@@ -49,38 +49,38 @@ UK_LABOUR = {
 
 
 # Acces Latter if Nedded
-'''
-    "UK_Job_Vacancies": {
+"""
+    "Job_Vacancies": {
         "url": "https://www.ons.gov.uk/generator?format=csv&uri=/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/timeseries/jp9z/lms",
         "freq": MONTHLY,
         "calc": None,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2024,
         "start_month": 3,
         "description": "UK Job Vacancies (thousands) - Total Services",
     },
-    "UK_Labour_Productivity_QoQ": {
+    "Labour_Productivity_QoQ": {
         "url": "https://www.ons.gov.uk/generator?format=csv&uri=/employmentandlabourmarket/peopleinwork/labourproductivity/timeseries/txbb/prdy",
         "freq": QUARTERLY,
         "calc": None,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2020,
         "start_month": 1,
         "description": "UK Whole Economy: Output per hour worked % change quarter on previous quarter SA",
     },
-    "UK_RealEarnExcldBonus_YoY": {
+    "RealEarnExcldBonus_YoY": {
         "url": "https://www.ons.gov.uk/file?uri=/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/averageweeklyearningsearn01/current/earn01jun2025.xls",
         "cdid": "A2F9",
         "freq": MONTHLY,
         "calc": None,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2024,
         "start_month": 3,
         "description": "Real Earnings Excluding Bonus Dengan DataSet (EARN01)",
     },
 }
 # Labour productivity index seriID (longterm - analysis)
-#    "UK_Labour_Productivity_IDX": {
+#    "Labour_Productivity_IDX": {
 #        "url": "https://www.ons.gov.uk/generator?format=csv&uri=/employmentandlabourmarket/peopleinwork/labourproductivity/timeseries/lzvb/prdy",
 #        "freq": QUARTERLY,
 #        "calc": None,
@@ -89,4 +89,5 @@ UK_LABOUR = {
 #        "start_month": 1,
 #        "description": "UK Whole Economy: Output per hour worked SA: Index 2022 = 100",
 #    },
-'''
+"""
+

@@ -10,9 +10,9 @@ from config.constants import (
 from providers.bls import BLSConfigModel
 
 US_PRICE: dict[str, BLSConfigModel] = {
-    "US_CPI_YoY": BLSConfigModel(
-        id="CUUR0000SA0",
-        api=SOURCE_BLS,
+    "CPI_YoY": BLSConfigModel(
+        code_name="CUUR0000SA0",
+        source=SOURCE_BLS,
         freq=MONTHLY,
         start_year=2022,
         start_month=3,
@@ -20,9 +20,9 @@ US_PRICE: dict[str, BLSConfigModel] = {
         unit=UNIT_PERCENT,
         description="Consumer Price Index, Year-over-Year Change",
     ),
-    "US_CoreCPI_YoY": BLSConfigModel(
-        id="CUUR0000SA0L1E",
-        api=SOURCE_BLS,
+    "CoreCPI_YoY": BLSConfigModel(
+        code_name="CUUR0000SA0L1E",
+        source=SOURCE_BLS,
         freq=MONTHLY,
         start_year=2022,
         start_month=3,
@@ -31,33 +31,9 @@ US_PRICE: dict[str, BLSConfigModel] = {
         description="Core Consumer Price Index, Year-over-Year Change",
     ),
 }
-
 """
-US_PRICE = {
-    "US_CPI_YoY": {
-        "id": "CUUR0000SA0",
-        "api": SOURCE_BLS,
-        "freq": MONTHLY,
-        "start_year": 2022,
-        "start_month": 3,
-        "calc": YOY,
-        "unit": UNIT_PERCENT,
-        "description": "Consumer Price Index, Year-over-Year Change",
-    },
-    "US_CoreCPI_YoY": {
-        "id": "CUUR0000SA0L1E",
-        "api": SOURCE_BLS,
-        "freq": MONTHLY,
-        "start_year": 2022,
-        "start_month": 3,
-        "calc": YOY,
-        "unit": UNIT_PERCENT,
-        "description": "Core Consumer Price Index, Year-over-Year Change",
-    },
-}
-
 # Acces Latter if Nedded
-    "US_CPI_MoM": {
+    "CPI_MoM": {
         "id": "CUUR0000SA0",
         "api": SOURCE_BLS,
         "freq": MONTHLY,
@@ -67,7 +43,7 @@ US_PRICE = {
         "unit": UNIT_PERCENT,
         "description": "Consumer Price Index, Month-over-Month Change",
     },
-    "US_CoreCPI_MoM": {
+    "CoreCPI_MoM": {
         "id": "CUUR0000SA0L1E",
         "api": SOURCE_BLS,
 "freq": MONTHLY,
@@ -77,7 +53,7 @@ US_PRICE = {
         "unit": UNIT_PERCENT,
         "description": "Core Consumer Price Index, Month-over-Month Change",
     },
-    "US_PPI_YoY": {
+    "PPI_YoY": {
         "id": "WPUFD4",
         "api": SOURCE_BLS,
         "freq": MONTHLY,
@@ -87,7 +63,7 @@ US_PRICE = {
         "unit": UNIT_PERCENT,
         "description": "Producer Price Index, Year-over-Year Change",
     },
-    "US_PPI_MoM": {
+    "PPI_MoM": {
         "id": "WPUFD4",
         "api": SOURCE_BLS,
         "freq": MONTHLY,
@@ -97,7 +73,7 @@ US_PRICE = {
         "unit": UNIT_PERCENT,
         "description": "Producer Price Index, Month-over-Month Change",
     },
-    "US_Core_PCE_MoM": {
+    "Core_PCE_MoM": {
         "api": SOURCE_BEA,
         "dataset": "NIPA",
         "table": "T20807",

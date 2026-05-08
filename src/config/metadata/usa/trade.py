@@ -3,9 +3,9 @@ from providers.bea.model import BEAConfigModel
 
 
 US_TRADE: dict[str, BEAConfigModel] = {
-    "US_CurrentAccount": BEAConfigModel(
-        id="BalCurrAcct",
-        api=SOURCE_BEA,
+    "CurrentAccount": BEAConfigModel(
+        code_name="BalCurrAcct",
+        source=SOURCE_BEA,
         start_year=2020,
         start_month=1,
         calc=RAW,
@@ -16,8 +16,8 @@ US_TRADE: dict[str, BEAConfigModel] = {
 }
 
 # FRED
-# US_TRADE: dict[str, BEAConfigModel] = {
-#     "US_CurrentAccount": BEAConfigModel(
+# TRADE: dict[str, BEAConfigModel] = {
+#     "CurrentAccount": BEAConfigModel(
 #         id="IEABC",
 #         api=SOURCE_FRED,
 #         start_year=2020,

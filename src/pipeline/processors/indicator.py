@@ -69,14 +69,16 @@ class IndicatorsProcessors:
             raw_process: FinalresultFetcher = await self.raw.process_raw_data(meta)
 
             #  parse data
-            parsed_data: FinalresultParse = self.parse(raw_process, meta.api, meta.freq)
+            parsed_data: FinalresultParse = self.parse(
+                raw_process, meta.source, meta.freq
+            )
 
             items: list[StagingItems] = [
                 StagingItems(
                     date=date_obj.date(),
                     year=date_obj.year,
-                    source=meta.api,
-                    code=meta.id,
+                    source=meta.source,
+                    code=meta.code_name,
                     indicator=name,
                     value=value,
                     country=country,

@@ -1,92 +1,92 @@
-from config.constants import QUARTERLY, SOURCE_LINKS, YOY
+from config.constants import QUARTERLY, SOURCE_URL, YOY
 
 UK_TRADE = {
-    "UK_CurrentAccountToGDP_QoQ": {
+    "CurrentAccountToGDP_QoQ": {
         "url": "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx",
         "cdid": "AA6H",
         "freq": QUARTERLY,
         "calc": None,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2020,
         "start_month": 1,
         "description": "BoP: current account balance as per cent of GDP",
     },
-    "UK_ServiceBalance": {
+    "ServiceBalance": {
         "url": "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx",
         "cdid": "KTMS",
         "freq": QUARTERLY,
         "calc": None,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2020,
         "start_month": 1,
         "description": "Balance of Payments: Total Trade in Services: Balance: £M: CP: NSA",
     },
-    "UK_Goods&ServicesBalance": {
+    "Goods&ServicesBalance": {
         "url": "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx",
         "cdid": "KTMY",
         "freq": QUARTERLY,
         "calc": None,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2020,
         "start_month": 1,
         "description": "Balance of Payments: Total Trade in Goods & Services: Balance: £M: CP: NSA",
     },
-    "UK_PrimaryIncomeBalance": {
+    "PrimaryIncomeBalance": {
         "url": "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx",
         "cdid": "KTMP",
         "freq": QUARTERLY,
         "calc": None,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2020,
         "start_month": 1,
         "description": "Income: Primary Income: Balance: £M: CP: NSA",
     },
-    "UK_SecondaryIncomeBalance": {
+    "SecondaryIncomeBalance": {
         "url": "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx",
         "cdid": "IKBP",
         "freq": QUARTERLY,
         "calc": None,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2020,
         "start_month": 1,
         "description": "Secondary Income (BPM6) total bal. CP SA: £m",
     },
-    "UK_CurrentAccountBalance": {
+    "CurrentAccountBalance": {
         "url": "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx",
         "cdid": "HBOP",
         "freq": QUARTERLY,
         "calc": None,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2020,
         "start_month": 1,
         "description": "BoP Current Account Balance SA £m",
     },
-    "UK_NetCapitalFlow": {
+    "NetCapitalFlow": {
         "url": "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx",
         "cdid": "HBNT",
         "freq": QUARTERLY,
         "calc": None,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2020,
         "start_month": 1,
         "description": "BoP FA total Net flows NSA £m",
     },
-    "UK_FA_FIEquity&Invest": {
+    "FA_FIEquity&Invest": {
         "url": "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx",
         "cdid": "XBLW",
         "freq": QUARTERLY,
         "calc": None,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2020,
         "start_month": 1,
         "description": "BoP: FA: PI: Liability flows: Total: Equity and investment fund shares: NSA; £m",
     },
-    "UK_FDITotal": {
+    "FDITotal": {
         "url": "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx",
         "cdid": "HBUY",
         "freq": QUARTERLY,
         "calc": YOY,
-        "api": SOURCE_LINKS,
+        "api": SOURCE_URL,
         "start_year": 2020,
         "start_month": 1,
         "description": "FDI : Inward : Total FDI : Equity Capital & Reinvested Earnings : nsa : £m",

@@ -8,7 +8,7 @@ SOURCE_WORLD_BANK = "worldbank"
 SOURCE_EUROSTAT = "eurostat"
 SOURCE_IMF = "imf"
 SOURCE_ECB = "ecb"
-SOURCE_LINKS = "links"
+SOURCE_URL = "url"
 
 # === Calculation ===
 YOY = "yoy"

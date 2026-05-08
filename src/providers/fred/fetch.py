@@ -49,7 +49,7 @@ class FREDProvider:
 
         # chekc api key
         if not self.api_key:
-            raise exc.ResourceNotFound(f"{meta.api} apikey not found for")
+            raise exc.ResourceNotFound(f"{meta.source} apikey not found for")
 
         # build starr year and month
         start_year = f"{meta.start_year}-{meta.start_month:02d}-01"
@@ -61,7 +61,7 @@ class FREDProvider:
         params: dict[str, str] = {
             "api_key": self.api_key,
             "file_type": "json",
-            "series_id": meta.id,
+            "series_id": meta.code_name,
             "observation_start": start_year,
             "observation_end": end_year,
             "sort_order": "desc",
@@ -88,7 +88,6 @@ class FREDProvider:
                     try:
                         data = await response.json()
 
-                        # WARNING:
                         # Find out more about the error message in this “error_code”
                         if "error_code" in data:
                             error_msg = data.get("error_message", "Unknown Error")

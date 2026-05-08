@@ -186,7 +186,6 @@ async def main() -> StagingData | None:
             async with orchest as orch:
                 # Run Single Indicator
                 if args.run == "single":
-                    logger.info("=" * 50)
                     logger.info(
                         "Run Single Indicator country %s, name: %s",
                         args.country,
