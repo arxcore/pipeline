@@ -62,12 +62,22 @@ class IndicatorsProcessors:
     # ETL Procesed indicators
     async def process_indicators(
         self, name: str, meta: BaseMetaModel, category: str, country: str
-    ) -> StagingData:
+    ) -> StagingData | None:
         """Main Process ETL indicatros"""
         try:
             #  Raw Data
-            raw_process: FinalresultFetcher = await self.raw.process_raw_data(meta)
+            raw_process: FinalresultFetcher | None = await self.raw.process_raw_data(
+                meta
+            )
 
+            if raw_process is None:
+                logger.warning(
+                    "No data fetched for Name %s, Source %s, Code %s",
+                    name,
+                    meta.source,
+                    meta.code_name,
+                )
+                return None
             #  parse data
             parsed_data: FinalresultParse = self.parse(
                 raw_process, meta.source, meta.freq

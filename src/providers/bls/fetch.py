@@ -14,6 +14,7 @@ import monitoring.exc_models as exc
 from providers.retry_http import Retryable
 from typing import Callable, cast
 import asyncio
+from providers.share_state import ExternalLimit
 
 logger = logging.getLogger(__name__)
 
@@ -47,10 +48,25 @@ class BLSProvider:
     async def fetch_data(
         self,
         meta: BaseMetaModel,
-    ) -> BLSSeries:
+    ) -> BLSSeries | None:
+        limit_event = ExternalLimit.get(meta.source)
+        # check the new assigment has arrived to the event loop and if the limit is reached before acquiring the semaphore
+        if limit_event.is_set():
+            logger.warning(
+                "%s daily limit already reached, skipping before entry semaphore queue.. skipping",
+                meta.source,
+            )
+            return None
 
         try:
             async with self.semaphore:
+                # check if the limit is reached after acquiring the semaphore to avoid making unnecessary requests to the server
+                if limit_event.is_set():
+                    logger.warning(
+                        "%s limit Trigered while waiting in semaphore... skipping",
+                        meta.source,
+                    )
+                    return None
                 # chekc api key
                 if not self.api_key:
                     raise exc.ResourceNotFound(f"{meta.source} apikey not found")
@@ -88,11 +104,13 @@ class BLSProvider:
 
                         if data.get("status") != "REQUEST_SUCCEEDED":
                             msg = data.get("message", ["Unknown api error"])
-                            # FIX:
-                            # batching requests
-                            # if daily limit reched stop all request to bls server on Even loop and continue to next providers
                             if "daily threshold" in msg[0]:
-                                raise exc.RateLimit("Daily limit reached")
+                                logger.warning(
+                                    "JSON respons msg, Daily limit reached for %s, skipping requests server until next day..",
+                                    meta.source,
+                                )
+                                limit_event.set()
+                                return None
                             raise exc.BLSRequestsError(
                                 msg[0] if msg else "Unknown api error"
                             )

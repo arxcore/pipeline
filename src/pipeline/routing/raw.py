@@ -51,7 +51,7 @@ class RawProcessors:
                 logger.exception("Error Closing Provider %s", p)
                 continue
 
-    async def process_raw_data(self, meta: BaseMetaModel) -> FinalresultFetcher:
+    async def process_raw_data(self, meta: BaseMetaModel) -> FinalresultFetcher | None:
         """Fetch Raw Data from ALL Prioviders"""
         logger.info("-" * 50)
         logger.info("Fetch data from %s, code %s", meta.source.upper(), meta.code_name)
@@ -66,6 +66,13 @@ class RawProcessors:
         try:
             providers_cls = self.providerd[meta.source]
             raw_data = await providers_cls.fetch_data(meta)
+            if raw_data is None:
+                logger.warning(
+                    "No data fetched for Source %s, Code %s",
+                    meta.source,
+                    meta.code_name,
+                )
+                return None
             return FinalresultFetcher(source=meta.source, fetch_result=raw_data)
 
         except exc.FetchDataError:
