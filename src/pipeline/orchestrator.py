@@ -5,7 +5,7 @@ from pipeline.processors.indicator import (
     IndicatorsProcessors,
 )
 import logging
-from config.metadata import ALL_INDICATORS
+from config.metadata.load_yaml import load_all_indicator
 from collections.abc import Coroutine
 from typing import Any
 import monitoring.exc_models as exc
@@ -25,6 +25,7 @@ class Orchest:
     ):
         self.processors = indicator_processor
         self.db = database
+        self.all_indicators = load_all_indicator()
 
     async def __aenter__(self):
         await self.processors.__aenter__()
@@ -50,7 +51,7 @@ class Orchest:
         tasks_names: list[dict[str, str]] = []
         try:
             # Iterate through ALL_INDICATORS and create tasks for each indicator
-            for country, categories in ALL_INDICATORS.items():
+            for country, categories in self.all_indicators.items():
                 for category, indicators in categories.items():
                     for indicators_name, meta in indicators.items():
                         # indicator: US_NFP, Unemploy
@@ -123,7 +124,7 @@ class Orchest:
 
         data: list[StagingItems] = []
 
-        for category, indicators in ALL_INDICATORS[country].items():
+        for category, indicators in self.all_indicators[country].items():
             for indicator_name, meta in indicators.items():
                 if indicator_name != name:
                     continue
@@ -151,6 +152,11 @@ class Orchest:
         logger.info(
             "Process Single Indicator Complete.. %s Rows Data, %s", len(data), name
         )
+        if len(data) == 0:
+            logger.warning(
+                "No data processed for Indicator %s, skipping database loading...", name
+            )
+            return
         # create table if not exists
         await self.db.create_table()
 

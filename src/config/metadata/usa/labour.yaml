@@ -1,0 +1,29 @@
+NFP:
+  code_name: "CES0000000001"
+  source: bls
+  start_year: 2024
+  start_month: 2
+  calc: net
+  freq: monthly
+  unit: People
+  description: "Nonfarm Payrolls, Net Change"
+
+Unemployment:
+  code_name: "LNS14000000"
+  source: bls
+  start_year: 2024
+  start_month: 3
+  calc: raw
+  freq: monthly
+  unit: "%"
+  description: "Unemployment Rate"
+
+AverageHourlyEarnings:
+  code_name: "CES0500000003"
+  source: bls
+  start_year: 2024
+  start_month: 2
+  calc: mom
+  freq: monthly
+  unit: "%"
+  description: "Average Hourly Earnings, Month-over-Month Change"

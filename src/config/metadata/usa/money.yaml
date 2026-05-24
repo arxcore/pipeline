@@ -1,0 +1,9 @@
+Fed_Interest_Rate:
+  code_name: "FEDFUNDS"
+  source: fred
+  calc: raw
+  freq: monthly
+  start_year: 2024
+  start_month: 2
+  unit: "%"
+  description: "Federal Funds Effective Rate"

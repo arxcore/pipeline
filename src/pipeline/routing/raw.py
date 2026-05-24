@@ -73,6 +73,7 @@ class RawProcessors:
                     meta.code_name,
                 )
                 return None
+
             return FinalresultFetcher(source=meta.source, fetch_result=raw_data)
 
         except exc.FetchDataError:

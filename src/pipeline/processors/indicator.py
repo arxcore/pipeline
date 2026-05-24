@@ -115,6 +115,7 @@ class IndicatorsProcessors:
             raise exc.FormatError(
                 f"Initialized data Type Error, Name {name} {e}"
             ) from e
+
         except exc.ProcessingFailed:
             logger.exception("Processing Failed for Name %s", name)
             raise

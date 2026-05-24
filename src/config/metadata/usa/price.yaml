@@ -1,0 +1,19 @@
+CPI_YoY:
+  code_name: "CUUR0000SA0"
+  source: bls
+  freq: monthly
+  start_year: 2022
+  start_month: 3
+  calc: yoy
+  unit: "%"
+  description: "Consumer Price Index, Year-over-Year Change"
+
+CoreCPI_YoY:
+  code_name: "CUUR0000SA0L1E"
+  source: bls
+  freq: monthly
+  start_year: 2022
+  start_month: 3
+  calc: yoy
+  unit: "%"
+  description: "Core Consumer Price Index, Year-over-Year Change"

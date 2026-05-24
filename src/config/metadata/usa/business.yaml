@@ -1,0 +1,9 @@
+Industrial_Production_MoM:
+  code_name: "INDPRO"
+  source: fred
+  calc: mom
+  freq: monthly
+  start_year: 2024
+  start_month: 2
+  unit: "%"
+  description: "Industrial Production Index, Month-over-Month Change"

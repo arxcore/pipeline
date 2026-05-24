@@ -100,6 +100,13 @@ class BEAProvider:
                     try:
                         data = await response.json()
 
+                        if data["BEAAPI"]["Results"].get("Error"):
+                            raise exc.BEARequestsError(
+                                data["BEAAPI"]["Results"]["Error"][
+                                    "APIErrorDescription"
+                                ]
+                            )
+
                         logger.debug("respons json raw data BEA: %s", data)
                         # Validate data
                         result = BEARawRespons.model_validate(data)

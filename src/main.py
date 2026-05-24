@@ -10,13 +10,15 @@ import traceback
 from config.settings import CONN_STR
 from pipeline.processors.indicator import StagingData, IndicatorsProcessors
 from pipeline.routing import RawProcessors, ParseProcessors
-from config.metadata import ALL_INDICATORS
+from config.metadata.load_yaml import load_all_indicator
 from monitoring.base_logging.logger import configure_logging
 from pipeline.orchestrator import Orchest
 import monitoring.exc_models as exc
 from upload.postegres.load import LoadDatabase
 
 logger = logging.getLogger(__name__)
+
+ALL_INDICATORS = load_all_indicator()
 
 
 def list_of_indicators() -> None:

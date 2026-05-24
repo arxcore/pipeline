@@ -1,0 +1,9 @@
+CurrentAccount:
+  code_name: "BalCurrAcct"
+  source: bea
+  start_year: 2020
+  start_month: 1
+  calc: raw
+  freq: QSA
+  unit: billion
+  description: "Balance on Current Account, Billions of Dollars"

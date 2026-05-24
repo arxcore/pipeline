@@ -121,6 +121,7 @@ class BLSProvider:
                             "BLS raw data validation done..  %s data",
                             len(result.series[0].data),
                         )
+
                         return result
 
                     except ValidationError as e:

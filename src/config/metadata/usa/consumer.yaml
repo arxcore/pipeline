@@ -1,0 +1,9 @@
+Retail_Sales_MoM:
+  code_name: "RSXFS"
+  source: fred
+  calc: mom
+  freq: monthly
+  start_year: 2024
+  start_month: 2
+  unit: "%"
+  description: "Retail Sales, Month-over-Month Change"
