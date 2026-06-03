@@ -1,4 +1,7 @@
-from .model import FinalresultFetcher
 from .raw import RawProcessors
+from .parse import ParseProcessors
 
-__all__ = ["FinalresultFetcher", "RawProcessors"]
+__all__ = [
+    "RawProcessors",
+    "ParseProcessors",
+]

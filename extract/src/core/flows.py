@@ -3,24 +3,27 @@ import logging
 from config.metadata.load_yaml import load_all_indicator
 from collections.abc import Coroutine
 from typing import Any
+from core.process.indicator import IndicatorsProcessors, StagingData, StagingItems
 import monitoring.exc_models as exc
-from core.process import RawProcessors
-from upload.postgres.load import LoadDatabase
-from core.process.model import FinalresultFetcher
+from upload.postgres.raw_data_respons import LoadRaw
+from upload.postgres.stg_indicator import LoadStg
+
 
 logger = logging.getLogger(__name__)
 
 
-class Orchest:
-    """Orgenaize runing indicaor"""
+class FlowsManager:
+    """Flows runing indicaor"""
 
     def __init__(
         self,
-        providers_processors: RawProcessors,
-        database: LoadDatabase,
+        providers_processors: IndicatorsProcessors,
+        stg: LoadStg,
+        raw_respons: LoadRaw,
     ):
         self.processors = providers_processors
-        self.db = database
+        self.stg_db = stg
+        self.raw_db = raw_respons
         self.all_indicators = load_all_indicator()
 
     async def __aenter__(self):
@@ -35,7 +38,7 @@ class Orchest:
     ):
         await self.processors.__aexit__(exc_type, exc_val, exc_tb)
 
-    async def run_all(self) -> list[dict[str, Any]] | None:
+    async def run_all(self) -> StagingData | None:
         """
         Running ALLConfig Data
         """
@@ -43,7 +46,7 @@ class Orchest:
         # DB Traking
 
         # create task for each indicator and run them concurrently
-        tasks: list[Coroutine[Any, Any, FinalresultFetcher | None]] = []
+        tasks: list[Coroutine[Any, Any, StagingData | None]] = []
         tasks_names: list[dict[str, str]] = []
         try:
             # Iterate through ALL_INDICATORS and create tasks for each indicator
@@ -53,8 +56,8 @@ class Orchest:
                         # indicator: US_NFP, Unemploy
                         # meta: url, id, calc, etc..``
                         tasks.append(
-                            self.processors.process_raw_data(
-                                meta, country, category, indicators_name
+                            self.processors.process_indicators(
+                                indicators_name, meta, category, country
                             )
                         )
                         tasks_names.append(
@@ -66,11 +69,11 @@ class Orchest:
                             }
                         )
             # Run all tasks concurrently and gather results
-            results: list[
-                FinalresultFetcher | BaseException | None
-            ] = await asyncio.gather(*tasks, return_exceptions=True)
+            results: list[StagingData | BaseException | None] = await asyncio.gather(
+                *tasks, return_exceptions=True
+            )
 
-            valid_data: list[FinalresultFetcher] = []
+            valid_data: list[StagingItems] = []
             skipped_count = 0
             error_count = 0
             success_count = 0
@@ -94,7 +97,7 @@ class Orchest:
                     continue
                 # result is valid FinalresultFetcher
                 success_count += 1
-                valid_data.append(result)
+                valid_data.extend(result.staging_result)
 
             if not valid_data:
                 logger.warning("No valid data processed, skipping..")
@@ -104,33 +107,30 @@ class Orchest:
             logger.info("Pipeline Summary:")
             logger.info("   >> Total Indicators Processed: %s", len(results))
             logger.info("   >> Successfully Processed: %s Indicators", success_count)
-            # logger.info("   >> Total Rows: %s records", len(valid_data))
             logger.info("   >> Skipped Indicators: %s", skipped_count)
             logger.info("   >> Failed Indicators: %s", error_count)
 
             # unpact data pydantic
-            data: list[dict[str, Any]] = [datas.fetch_result for datas in valid_data]
+            # data: list[StagingItems] = [datas.staging_result for datas in valid_data]
 
-            return data
+            return StagingData(staging_result=valid_data)
 
         except exc.PipelineCrash:
             logger.exception("Pipeline process carsh during operation")
             raise
 
-    async def run_by_single(
-        self, country: str, name: str
-    ) -> list[dict[str, Any]] | None:
+    async def run_by_single(self, country: str, name: str) -> StagingData | None:
         "Running single process of indicator"
 
-        data: list[FinalresultFetcher] = []
+        data: list[StagingItems] = []
 
         for category, indicators in self.all_indicators[country].items():
             for indicator_name, meta in indicators.items():
                 if indicator_name != name:
                     continue
                 try:
-                    records = await self.processors.process_raw_data(
-                        meta, country, category, indicator_name
+                    records = await self.processors.process_indicators(
+                        indicator_name, meta, category, country
                     )
 
                     if isinstance(records, BaseException) or records is None:
@@ -144,7 +144,7 @@ class Orchest:
                             f"Processing Failed for Indicator {indicator_name}"
                         )
 
-                    data.append(records)
+                    data.extend(records.staging_result)
                 except exc.ProcessingFailed:
                     logger.exception("Failed to Procesed Indicators")
                     logger.warning("skipping  Indicators: %s", indicator_name)
@@ -154,11 +154,7 @@ class Orchest:
             logger.warning("No data processed for %s Indicator, skipping data...", name)
             return
 
-        # unpact data from list of FinalresultFetcher to list of dict
-        ex_data: list[dict[str, Any]] = [ex_data.fetch_result for ex_data in data]
-
         logger.info(
-            "Process Single Indicator Complete.. %s indicator, %s", len(ex_data), name
+            "Process Single Indicator Complete.. %s indicator, %s", len(data), name
         )
-
-        return ex_data
+        return StagingData(staging_result=data)

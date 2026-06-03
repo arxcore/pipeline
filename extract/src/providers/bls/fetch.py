@@ -116,13 +116,13 @@ class BLSProvider:
                             )
 
                         logger.debug("json respons raw data BLS: %s", data)
-                        result = BLSRawResponsedata.model_validate(data)
+
                         logger.info(
                             "BLS raw data validation done..  %s data",
-                            len(result.Results.series[0].data),
+                            len(data["Results"]["series"][0]["data"]),
                         )
 
-                        return result
+                        return data
 
                     except ValidationError as e:
                         raise exc.BLSRequestsError(

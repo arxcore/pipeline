@@ -5,16 +5,19 @@ from psycopg_pool import AsyncConnectionPool
 import asyncio
 import logging
 import sys
-from typing import Any, Optional
+from typing import Optional
 import traceback
 from config.settings import CONN_STR
 from config.metadata.load_yaml import load_all_indicator
-from core.process.model import FinalresultFetcher
+from core.process.indicator import IndicatorsProcessors, StagingData
+from core.models import FinalresultFetcher
+from core.process.parse import ParseProcessors
 from core.process.raw import RawProcessors
 from monitoring.logs.logger import configure_logging
-from core.indicator import Orchest
+from core.flows import FlowsManager
 import monitoring.exc_models as exc
-from upload.postgres.load import LoadDatabase
+from upload.postgres.raw_data_respons import LoadRaw
+from upload.postgres.stg_indicator import LoadStg
 
 logger = logging.getLogger(__name__)
 
@@ -103,12 +106,17 @@ def apply_log_level(log_level: int) -> None:
     logger.info("Set Logging Level Name %s ", log_name)
 
 
-def build_injection(pool: AsyncConnectionPool[AsyncConnection[TupleRow]]) -> Orchest:
+def build_injection(
+    pool: AsyncConnectionPool[AsyncConnection[TupleRow]],
+) -> FlowsManager:
     """Build Dependency Injection for Pipeline"""
     # Cofigure Connection Pool for Upload Data to Postgres
-    database = LoadDatabase(pool)
+    stg_db = LoadStg(pool)
+    raw_db = LoadRaw(pool)
     procc_raw = RawProcessors()
-    return Orchest(procc_raw, database)
+    procc_parse = ParseProcessors()
+    process_indicators = IndicatorsProcessors(procc_raw, procc_parse, stg_db, raw_db)
+    return FlowsManager(process_indicators, stg_db, raw_db)
 
 
 async def main() -> FinalresultFetcher | None:
@@ -176,7 +184,7 @@ async def main() -> FinalresultFetcher | None:
             sys.exit(1)
 
     # Execute Pipeline
-    data: list[dict[str, Any]] | None = None
+    data: StagingData | None = None
     try:
         async with AsyncConnectionPool[AsyncConnection[TupleRow]](
             conninfo=CONN_STR,
@@ -186,8 +194,11 @@ async def main() -> FinalresultFetcher | None:
             timeout=10,
         ) as pool:
             # Execute Pipeline
-            orchest: Orchest = build_injection(pool)
+            orchest: FlowsManager = build_injection(pool)
+
             async with orchest as orch:
+                # create table if not exists raw respon indicator
+                await orch.raw_db.create_raw_respons_table()
                 # Run Single Indicator
                 if args.run == "single":
                     logger.info(
@@ -201,12 +212,15 @@ async def main() -> FinalresultFetcher | None:
                 elif args.run == "all":
                     logger.info("Run ALL Config Indicators")
                     data = await orch.run_all()
+
                 if args.load and data is not None:
                     # setup table if not exists
-                    await orch.db.create_table()
+                    await orch.stg_db.create_stg_table()
                     # load data
-                    logger.info("Loading %s indicator To database...", len(data))
-                    await orch.db.load_data(data)
+                    logger.info(
+                        "Loading %s indicator To database...", len(data.staging_result)
+                    )
+                    await orch.stg_db.load_stg_indicator(data)
 
     except exc.PipelineCrash as e:
         logger.exception("Error during execution pipeline: %s", e)

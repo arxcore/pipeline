@@ -1,7 +1,7 @@
 from datetime import datetime
 import aiohttp
 from pydantic import ValidationError
-from providers.bea.model import BEARawRespons, BEAResult
+from providers.bea.model import BEARawRespons
 from providers import BaseMetaModel
 import logging
 from tenacity import (
@@ -108,14 +108,12 @@ class BEAProvider:
                             )
 
                         logger.debug("respons json raw data BEA: %s", data)
-                        # Validate data
-                        result = BEARawRespons.model_validate(data)
-
                         logger.info(
                             "BEA raw data validation done.. %s data",
-                            len(result.BEAAPI.Results.Data),
+                            len(data["BEAAPI"]["Results"]["Data"]),
                         )
-                        return result
+
+                        return data
                     except aiohttp.ContentTypeError as e:
                         # TODO:
                         # test if content type not json fromat

@@ -97,13 +97,13 @@ class FREDProvider:
                                 f"Unknown FRED Requests Error {error_msg}"
                             )
 
-                        result = FREDRawResponse.model_validate(data)
                         logger.debug("respons json raw data FRED: %s", data)
                         logger.info(
                             "Fred raw data validation done.. %s data",
-                            len(result.observations),
+                            len(data["observations"]),
                         )
-                        return result
+
+                        return data
 
                     except ValidationError as e:
                         raise exc.FREDRequestsError(

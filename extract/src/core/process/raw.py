@@ -1,13 +1,10 @@
 from config.settings import Resources
-from datetime import datetime, timezone
 from providers.bls import BLSProvider
 from providers.fred import FREDProvider
 from providers.bea import BEAProvider
 from providers import BaseMetaModel
-from core.process.model import FinalresultFetcher
+from core.models import FinalresultFetcher
 import logging
-import json
-import hashlib
 import monitoring.exc_models as exc
 
 logger = logging.getLogger(__name__)
@@ -54,9 +51,7 @@ class RawProcessors:
                 logger.exception("Error Closing Provider %s", p)
                 continue
 
-    async def process_raw_data(
-        self, meta: BaseMetaModel, country: str, category: str, indicator_name: str
-    ) -> FinalresultFetcher | None:
+    async def process_raw_data(self, meta: BaseMetaModel) -> FinalresultFetcher | None:
         """Fetch Raw Data from ALL Prioviders"""
         logger.info("-" * 50)
         logger.info("Fetch data from %s, code %s", meta.source.upper(), meta.code_name)
@@ -79,24 +74,7 @@ class RawProcessors:
                 )
                 return None
 
-            # unpact pydantic to json
-            payload_respons = {
-                "source_data": raw_data.model_dump(mode="json"),
-                "meta": {
-                    "country": country,
-                    "category": category,
-                    "indicator": indicator_name,
-                    **meta.model_dump(mode="json"),
-                    "load_at": datetime.now(timezone.utc).isoformat(),
-                    "checksum": hashlib.sha256(
-                        json.dumps(
-                            raw_data.model_dump(mode="json"), sort_keys=True
-                        ).encode()
-                    ).hexdigest(),
-                },
-            }
-
-            return FinalresultFetcher(source=meta.source, fetch_result=payload_respons)
+            return FinalresultFetcher(source=meta.source, fetch_result=raw_data)
 
         except exc.FetchDataError:
             logger.exception("Error Fetch Data from Source %s", meta.source)
