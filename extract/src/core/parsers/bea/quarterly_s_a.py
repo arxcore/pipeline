@@ -1,8 +1,10 @@
+from decimal import Decimal
 from core.models import FinalresultParse, FinalresultFetcher
 from providers.bea.model import BEARawRespons
 import logging
 from core.parsers.registry import Frequency, Providers, register
 import monitoring.exc_models as exc
+from core.models.parsing_schemas import ParsedItems
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +22,8 @@ def parse_qsa_bea(data: FinalresultFetcher) -> FinalresultParse:
         len(RAW_DATA.BEAAPI.Results.Data),
         RAW_DATA.BEAAPI.Results.Data,
     )
-    parse_data: dict[str, float] = {}
+    # parse_data: dict[str, float] = {}
+    parse_data: list[ParsedItems] = []
     missing_value: list[str] = []
     for item in RAW_DATA.BEAAPI.Results.Data:
         date = item.TimePeriod
@@ -32,9 +35,10 @@ def parse_qsa_bea(data: FinalresultFetcher) -> FinalresultParse:
             logger.warning("Skipping Parsing data: %s", date)
             missing_value.append(date)
             continue
+
         try:
-            value = float(str_value)
-            parse_data[date_key] = value
+            values = Decimal(str_value)
+            parse_data.append(ParsedItems(date_key=date_key, value=values))
         except ValueError as e:
             logger.error(f"Parse Error for data: {date} with value: {str_value}-{e}")
             continue
@@ -44,9 +48,10 @@ def parse_qsa_bea(data: FinalresultFetcher) -> FinalresultParse:
 
     logger.debug(
         "Parse QSA data Done Sampl data  %s",
-        (parse_data.items(), len(parse_data)),
+        (parse_data, len(parse_data)),
     )
 
     if missing_value:
         logger.warning("Total Missing value for data %s", len(missing_value))
+
     return FinalresultParse(parse_result=parse_data)

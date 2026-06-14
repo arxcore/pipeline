@@ -1,27 +1,40 @@
-import argparse
 from psycopg import AsyncConnection
 from psycopg.rows import TupleRow
 from psycopg_pool import AsyncConnectionPool
 import asyncio
 import logging
 import sys
-from typing import Optional
 import traceback
 from config.settings import CONN_STR
-from config.metadata.load_yaml import load_all_indicator
-from core.process.indicator import IndicatorsProcessors, StagingData
+from typing import Optional
+from core.cli import PipelineCliParser
 from core.models import FinalresultFetcher
+from config.metadata.load_yaml import load_all_indicator
+import argparse
 from core.process.parse import ParseProcessors
 from core.process.raw import RawProcessors
-from monitoring.logs.logger import configure_logging
+from monitoring.logs import apply_log_level, resolve_log_level
 from core.flows import FlowsManager
 import monitoring.exc_models as exc
-from upload.postgres.raw_data_respons import LoadRaw
-from upload.postgres.stg_indicator import LoadStg
+from upload.postgres import LoadRaw, LoadStg, FetchDB
 
 logger = logging.getLogger(__name__)
 
 ALL_INDICATORS = load_all_indicator()
+
+
+def build_injection(
+    pool: AsyncConnectionPool[AsyncConnection[TupleRow]],
+) -> PipelineCliParser:
+    """Build Dependency Injection for Pipeline"""
+    # Cofigure Connection Pool for Upload Data to Postgres
+    stg_db = LoadStg(pool)
+    raw_db = LoadRaw(pool)
+    procc_raw = RawProcessors()
+    fetch_db = FetchDB(pool)
+    procc_parse = ParseProcessors()
+    flows = FlowsManager(procc_raw, stg_db, raw_db, procc_parse, fetch_db)
+    return PipelineCliParser(flows)
 
 
 def list_of_indicators() -> None:
@@ -67,124 +80,164 @@ def valid_input(
     return True
 
 
-def resolve_log_level(level_str: str) -> int:
-    """Resolve Log Level String to Log Level Int"""
-    level_mapping = {
-        "debug": logging.DEBUG,
-        "info": logging.INFO,
-        "warning": logging.WARNING,
-        "error": logging.ERROR,
-        "critical": logging.CRITICAL,
-    }
-    key: str = level_str.lower().strip()
-    if key not in level_mapping:
-        raise ValueError(f"Unknown log level: {level_str!r}")
-    return level_mapping[key]
-
-
-def level_name(log_level: int) -> str:
-    """Get Log Level Name from Log Level Int"""
-    level_names = {
-        logging.DEBUG: "DEBUG",
-        logging.INFO: "INFO",
-        logging.WARNING: "WARNING",
-        logging.ERROR: "ERROR",
-        logging.CRITICAL: "CRITICAL",
-    }
-    result = level_names.get(log_level)
-    if result is None:
-        raise ValueError(f"Unknown log level (int): {log_level}")
-
-    return result
-
-
-def apply_log_level(log_level: int) -> None:
-    """Apply Log Level to Logger and Print Log Level Name"""
-    log_name: str = level_name(log_level)
-
-    configure_logging(log_level)
-    logger.info("Set Logging Level Name %s ", log_name)
-
-
-def build_injection(
-    pool: AsyncConnectionPool[AsyncConnection[TupleRow]],
-) -> FlowsManager:
-    """Build Dependency Injection for Pipeline"""
-    # Cofigure Connection Pool for Upload Data to Postgres
-    stg_db = LoadStg(pool)
-    raw_db = LoadRaw(pool)
-    procc_raw = RawProcessors()
-    procc_parse = ParseProcessors()
-    process_indicators = IndicatorsProcessors(procc_raw, procc_parse, stg_db, raw_db)
-    return FlowsManager(process_indicators, stg_db, raw_db)
-
-
-async def main() -> FinalresultFetcher | None:
-    """Main Execute command line pipeline"""
-    parse = argparse.ArgumentParser()
-    main_group = parse.add_argument_group("structure data")
-    main_group.add_argument("-c", "--country", help="country of indicator")
-
-    main_group.add_argument("-n", "--name", help="name of indicators")
-
+def build_args() -> argparse.ArgumentParser:
+    parse = argparse.ArgumentParser(
+        description="Economic Data Pipeline CLI",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    # logging level
     log_group = parse.add_argument_group("Logging Option")
     log_group.add_argument(
         "-l",
-        "--log",
+        "--log-level",
         choices=["debug", "info", "warning", "error", "critical"],
         default="info",
-        help="logging level to monitoring",
+        help="set logging level to monitoring (default: INFO)",
     )
+    # pipeline runner mode
     run_mode = parse.add_mutually_exclusive_group(required=False)
+    run_mode.add_argument(
+        "--list", action="store_true", help="list of available indicators"
+    )
     run_mode.add_argument(
         "-r",
         "--run",
         choices=["single", "all"],
         default="all",
-        help="select running pipeline mode, default=all ",
+        help="Execution Pipeline Mode, Default: all",
     )
-    run_mode.add_argument(
-        "-ls", "--list", action="store_true", help="list of available indicators"
-    )
-    load = parse.add_argument_group("Load Into Database")
-    load.add_argument("--load", action="store_true", help="Load datas into postgres")
 
-    args = parse.parse_args()
+    # single run args
+    single_group = parse.add_argument_group("single indiator mode (only for -r single")
+    single_group.add_argument("-c", "--country", help="country of indicator")
+    single_group.add_argument("-n", "--name", help="name of indicators")
+
+    # source control
+    source_group = parse.add_argument_group(title="Source Selection")
+    source_group.add_argument(
+        "--source",
+        nargs="+",
+        choices=["bls", "bea", "fred", "all"],
+        default=None,
+        help="Specific source to fetch (default: all)",
+    )
+
+    # stages control
+    stage_group = parse.add_argument_group(title="Pipeline Stages")
+    stage_group.add_argument(
+        "--stage",
+        choices=["fetch", "parse", "all"],
+        default="fetch",
+        help="Execute specific stage. 'all' runs fetch>loadraw>parse>loadstg",
+    )
+
+    # utils
+    utils_group = parse.add_argument_group("Utilities")
+    utils_group.add_argument(
+        "--export-json",
+        action="store_true",
+        help="Export pipeline state/results to json file",
+    )
+    utils_group.add_argument(
+        "--replay",
+        action="store_true",
+        help="refetch data from database and inspect structure",
+    )
+
+    utils_group.add_argument(
+        "--stdout", action="store_true", help="print results to consol"
+    )
+    utils_group.add_argument(
+        "--persist-raw", action="store_true", help="write raw respons into DB"
+    )
+    utils_group.add_argument(
+        "--persist-stg", action="store_true", help="write staging into DB"
+    )
+    return parse
+
+
+def valid_args() -> argparse.Namespace | None:
+    parser = build_args()
+    args = parser.parse_args()
+    # List of Indicators Availabel on Config Data
+    if args.list:
+        print("List Available Indicators:")
+        list_of_indicators()
+        return None
+    # single mode Validation
+    if args.run == "single":
+        if args.source is not None:
+            logger.error("single run no options source")
+            parser.print_help()
+            sys.exit(1)
+        if not args.country:
+            logger.error("country is required in single run")
+            parser.print_help()
+            sys.exit(1)
+        if not args.name:
+            logger.error("name is required in single run")
+            parser.print_help()
+            sys.exit(1)
+        if not valid_input(args.country, indicator_name=args.name):
+            logger.error(f"indciator {args.name}, country {args.country} not found")
+            parser.print_help()
+            sys.exit(1)
+
+    # replay only for stage fetch
+    if args.replay and args.stage != "fetch":
+        logger.warning("replay only for fetch stage from db")
+        parser.print_help()
+        sys.exit(1)
+    # If replay mode, persist raw and stg should be false
+    if args.replay and (args.persist_raw or args.persist_stg):
+        logger.warning("Replay mode cannot be used with persist options")
+        parser.print_help()
+        sys.exit(1)
+    # If export json, replay and dry run mode, persist raw and stg should be false
+    # because export json is for inspect data structure and pipeline state, not for persist data or replay data
+    if args.export_json and (args.persist_raw or args.persist_stg):
+        logger.warning("Export JSON cannot be used with  persist options")
+        parser.print_help()
+        sys.exit(1)
+
+    # If persist raw, persist stg should be false
+    if args.persist_raw and args.persist_stg:
+        logger.warning("Cannot persist both raw and staging data at the same time")
+        parser.print_help()
+        sys.exit(1)
+    if args.persist_raw and args.stage != "fetch":
+        logger.warning("persist_raw invalid stage")
+        parser.print_help()
+        sys.exit(1)
+
+    if args.persist_stg and args.stage != "parse":
+        logger.warning("persist_stg invalid stage")
+        parser.print_help()
+        sys.exit(1)
+
+    if args.run == "all" and args.source is None:
+        args.source = "all"
+
+    return args
+
+
+async def main() -> FinalresultFetcher | None:
+    """Main Execute command line pipeline"""
+    args = valid_args()
+
+    # if list indicator called
+    if args is None:
+        return None
 
     # setup logging
     try:
-        if args.log:
-            target_level: int = resolve_log_level(args.log)
+        if args.log_level:
+            target_level: int = resolve_log_level(args.log_level)
             apply_log_level(target_level)
 
     except Exception as e:
         logger.exception("Errors setup logging: %s", e, exc_info=True)
-    # List of Indicators Availabel on Config Data
-    if args.list:
-        print("List Available Indicators:")
 
-        list_of_indicators()
-        return
-    # Country is required for Single mode indicators and etc.., (exclude run all)
-    if not args.country and args.run == "single":
-        logger.warning("country is required")
-        parse.print_help()
-        sys.exit(1)
-
-    # Validate Warning, if run mode not give args Indicator Name
-    if args.run == "single" and not args.name:
-        logger.warning("name is required")
-        parse.print_help()
-        sys.exit(1)
-
-    if args.run == "single":
-        # Indicators Validation If args in ALL Indicators
-        if not valid_input(args.country, indicator_name=args.name):
-            parse.print_help()
-            sys.exit(1)
-
-    # Execute Pipeline
-    data: StagingData | None = None
     try:
         async with AsyncConnectionPool[AsyncConnection[TupleRow]](
             conninfo=CONN_STR,
@@ -194,33 +247,10 @@ async def main() -> FinalresultFetcher | None:
             timeout=10,
         ) as pool:
             # Execute Pipeline
-            orchest: FlowsManager = build_injection(pool)
+            orchest: PipelineCliParser = build_injection(pool)
 
             async with orchest as orch:
-                # create table if not exists raw respon indicator
-                await orch.raw_db.create_raw_respons_table()
-                # Run Single Indicator
-                if args.run == "single":
-                    logger.info(
-                        "Run Single Indicator country %s, name: %s",
-                        args.country,
-                        args.name,
-                    )
-                    data = await orch.run_by_single(args.country, args.name)
-
-                # Default Mode Run Pipeline
-                elif args.run == "all":
-                    logger.info("Run ALL Config Indicators")
-                    data = await orch.run_all()
-
-                if args.load and data is not None:
-                    # setup table if not exists
-                    await orch.stg_db.create_stg_table()
-                    # load data
-                    logger.info(
-                        "Loading %s indicator To database...", len(data.staging_result)
-                    )
-                    await orch.stg_db.load_stg_indicator(data)
+                await orch.runner(args)
 
     except exc.PipelineCrash as e:
         logger.exception("Error during execution pipeline: %s", e)

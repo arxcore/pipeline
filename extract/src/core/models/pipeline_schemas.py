@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from typing import Any, Literal
 
+from core.models.parsing_schemas import ParsedItems
+
 
 class FinalresultFetcher(BaseModel):
     """Base Class Final Result ALL Fetcher"""
@@ -12,4 +14,4 @@ class FinalresultFetcher(BaseModel):
 class FinalresultParse(BaseModel):
     """Base Class Final Result ALL Parse"""
 
-    parse_result: dict[str, float]
+    parse_result: list[ParsedItems]

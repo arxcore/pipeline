@@ -1,5 +1,7 @@
+from decimal import Decimal
 import logging
 from core.models import FinalresultParse, FinalresultFetcher
+from core.models.parsing_schemas import ParsedItems
 from providers.bls.model import BLSRawResponsedata
 from core.parsers.registry import register, Providers, Frequency
 import monitoring.exc_models as exc
@@ -20,7 +22,7 @@ def parse_monthly_bls(data: FinalresultFetcher) -> FinalresultParse:
     # Validation FinalresultFetcher
     RAW_DATA = BLSRawResponsedata.model_validate(data.fetch_result)
 
-    parse_data: dict[str, float] = {}
+    parse_data: list[ParsedItems] = []
     error: list[str] = []
     skip_value = 0
 
@@ -34,36 +36,31 @@ def parse_monthly_bls(data: FinalresultFetcher) -> FinalresultParse:
         for item in RAW_DATA.Results.series:
             for data_point in item.data:
                 # target 2023-01: value
-
                 year = data_point.year
                 period = data_point.period
-
                 # skip non-montly data
                 if not period.startswith("M"):
                     logger.warning("skipping monthly data")
                     continue
-
                 # # M01 convert to 01, etc..
                 month = period[1:].zfill(2)
-
                 # # build date key
                 date_key = f"{year}-{month}-01"
-
+                # footnotes
+                notes = data_point.footnotes
                 # # ambil value default 0
                 str_value = data_point.value
-
                 # # skip value = -, n/a etc..
                 if str_value in ["-", "N/A", "NA", ""]:
                     skip_value += 1
                     error.append(str_value)
                     continue
-
                 try:
-                    # convert str -> float
-                    value = float(str_value)
-
-                    parse_data[date_key] = value
-
+                    # convert str -> Decimal
+                    values = Decimal(str_value)
+                    parse_data.append(
+                        ParsedItems(date_key=date_key, value=values, footnotes=notes),
+                    )
                 except ValueError as e:
                     logger.error("Skipping Parsing data: %s", e)
                     # contoh: 300 valid, 1 error = skip 1 eror dan lanjut

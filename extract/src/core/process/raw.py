@@ -4,7 +4,10 @@ from providers.fred import FREDProvider
 from providers.bea import BEAProvider
 from providers import BaseMetaModel
 from core.models import FinalresultFetcher
+import json
+import hashlib
 import logging
+from datetime import datetime, timezone
 import monitoring.exc_models as exc
 
 logger = logging.getLogger(__name__)
@@ -51,7 +54,9 @@ class RawProcessors:
                 logger.exception("Error Closing Provider %s", p)
                 continue
 
-    async def process_raw_data(self, meta: BaseMetaModel) -> FinalresultFetcher | None:
+    async def process_raw_data(
+        self, name: str, meta: BaseMetaModel, category: str, country: str
+    ) -> FinalresultFetcher | None:
         """Fetch Raw Data from ALL Prioviders"""
         logger.info("-" * 50)
         logger.info("Fetch data from %s, code %s", meta.source.upper(), meta.code_name)
@@ -73,8 +78,22 @@ class RawProcessors:
                     meta.code_name,
                 )
                 return None
+            # unpact pydantic to json
+            payload_respons = {
+                "source_data": raw_data,
+                "meta": {
+                    "country": country,
+                    "category": category,
+                    "indicator": name,
+                    **meta.model_dump(mode="json"),
+                    "load_at": datetime.now(timezone.utc).isoformat(),
+                    "checksum": hashlib.sha256(
+                        json.dumps(raw_data, sort_keys=True).encode()
+                    ).hexdigest(),
+                },
+            }
 
-            return FinalresultFetcher(source=meta.source, fetch_result=raw_data)
+            return FinalresultFetcher(source=meta.source, fetch_result=payload_respons)
 
         except exc.FetchDataError:
             logger.exception("Error Fetch Data from Source %s", meta.source)

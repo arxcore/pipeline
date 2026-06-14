@@ -9,12 +9,12 @@ logger = logging.getLogger(__name__)
 class ParseProcessors:
     """Handling Parse Data with Diverent Frequency"""
 
-    def __call__(
+    def parse_data(
         self, raw_data: FinalresultFetcher, api: str, freq: str | None = None
     ) -> FinalresultParse:
         """Process Parse Data by api Type"""
-        logger.info("-" * 50)
 
+        logger.info("Parsing data for %s with frequency %s", api, freq)
         try:
             if api not in PARSE_REGISTER:
                 raise exc.RoutingError(f"{api} not found in register parse")

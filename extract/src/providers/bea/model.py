@@ -18,8 +18,14 @@ class BEAField(BaseModel):
     DataValue: str
 
 
+class BEANotes(BaseModel):
+    NoteRef: str | None = None
+    NoteText: str | None = None
+
+
 class BEAResult(BaseModel):
     Data: list[BEAField]
+    Notes: list[BEANotes]
 
 
 class BEAapi(BaseModel):

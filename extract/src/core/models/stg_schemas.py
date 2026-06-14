@@ -1,5 +1,7 @@
 from datetime import date, datetime
+from decimal import Decimal
 from pydantic import BaseModel
+from typing import Any
 
 
 class StagingItems(BaseModel):
@@ -10,11 +12,11 @@ class StagingItems(BaseModel):
     indicator: str
     country: str
     category: str
-    value: float
+    value: Decimal
     frequency: str
     method: str
     unit: str
-    footnotes_note: str | None = None
+    footnotes_note: list[Any] | None = None
     processed: datetime
     description: str
 

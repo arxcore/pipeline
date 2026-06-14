@@ -5,6 +5,9 @@ from psycopg import AsyncConnection
 import psycopg_pool
 from core.models import StagingData
 import logging
+from psycopg.types.json import Json
+from types import TracebackType
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +18,19 @@ class LoadStg:
         pool: AsyncConnectionPool[AsyncConnection[TupleRow]],
     ) -> None:
         self.pool = pool
+
+    async def __aenter__(self):
+        await self.pool.__aenter__()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Optional[TracebackType],
+    ):
+
+        await self.pool.__aexit__(exc_type, exc_val, exc_tb)
 
     async def create_stg_table(self):
         """Create table if not exists"""
@@ -35,9 +51,9 @@ class LoadStg:
                             category TEXT NOT NULL,
                             frequency TEXT NOT NULL,
                             method TEXT NOT NULL,
-                            unit TEXT,
+                            unit TEXT NOT NULL,
                             footnotes_note JSONB,
-                            description TEXT,
+                            description TEXT NOT NULL,
                             processed TIMESTAMPTZ,
                             UNIQUE (date, source, code, country, frequency)
                         );
@@ -49,6 +65,7 @@ class LoadStg:
 
     async def load_stg_indicator(self, data: StagingData):
         """Load Data"""
+
         async with self.pool.connection() as aconn:  # create AsyncConnection from pool
             async with aconn:  # ensure transaction is properly closed after use
                 async with aconn.cursor() as acur:  # create AsyncCursor from connection
@@ -65,12 +82,24 @@ class LoadStg:
                             item.frequency,
                             item.method,
                             item.unit,
-                            item.footnotes_note,
+                            Json(
+                                [
+                                    {"ref": f.code, "text": f.text}
+                                    for f in (item.footnotes_note or [])
+                                    if f.code and f.text
+                                ]
+                            )
+                            if item.footnotes_note
+                            else None,
                             item.description,
                             item.processed,
                         )
                         for item in data.staging_result
                     ]
+                    from rich import print
+
+                    print(rows)
+                    logger.info("Loading %s rows to database...", len(rows))
                     try:
                         await acur.executemany(
                             """
@@ -79,9 +108,9 @@ class LoadStg:
                                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                                     ON CONFLICT (date, source, code, country, frequency)
                                     DO UPDATE SET 
-                                        value = EXCLUDE.value,
-                                        footnotes_note = EXCLUDE.footnotes_note,
-                                        processed = EXCLUDE.processed
+                                        value = EXCLUDED.value,
+                                        footnotes_note = EXCLUDED.footnotes_note,
+                                        processed = EXCLUDED.processed
                                     """,
                             rows,
                         )

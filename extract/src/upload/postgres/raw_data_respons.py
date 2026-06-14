@@ -1,4 +1,5 @@
-from typing import Any
+from typing import Any, Optional
+from types import TracebackType
 import psycopg
 from psycopg_pool import AsyncConnectionPool
 from psycopg.rows import TupleRow
@@ -17,6 +18,18 @@ class LoadRaw:
     ) -> None:
         self.pool = pool
 
+    async def __aenter__(self):
+        await self.pool.__aenter__()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Optional[TracebackType],
+    ):
+        await self.pool.__aexit__(exc_type, exc_val, exc_tb)
+
     async def create_raw_respons_table(self):
         """Create table if not exists"""
         async with self.pool.connection() as aconn:
@@ -26,7 +39,7 @@ class LoadRaw:
                         """
                         CREATE TABLE IF NOT EXISTS raw_respons_indic (
                         id BIGSERIAL PRIMARY KEY,
-                        payload JSONB,
+                        payload JSONB NOT NULL,
                         load_at TIMESTAMPTZ DEFAULT NOW()
                         );
                         -- uniq index 
