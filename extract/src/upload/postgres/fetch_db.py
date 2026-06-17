@@ -39,10 +39,6 @@ class FetchDB:
                     await curr.execute(query, (name, country))
                     record = await curr.fetchone()
                     if record:
-                        from rich import print
-
-                        print(record)
-
                         return record[0]
 
                     logger.warning(
@@ -52,23 +48,26 @@ class FetchDB:
                     )
                     return None
 
-    async def fetch_all_database(self):
+    async def fetch_all_database(self, sources: list[str]):
         """fetch all data from database, return list of dict"""
+        source = sources or []
         query = """
             SELECT DISTINCT ON (
-            payload -> 'meta' ->> 'code', payload -> 'meta' ->> 'source'
+            payload -> 'meta' ->> 'code_name',
+            payload -> 'meta' ->> 'indicator'
             )
             payload, load_at
             FROM raw_respons_indic
+            WHERE cardinality(%s::text[]) = 0 OR payload -> 'meta' ->> 'source' = ANY(%s)
             ORDER BY 
-            payload -> 'meta' ->> 'code',
-            payload -> 'meta' ->> 'source',
+            payload -> 'meta' ->> 'code_name',
+            payload -> 'meta' ->> 'indicator',
             load_at DESC;
             """
         async with self.pool.connection() as acon:
             async with acon:
                 async with acon.cursor() as curr:
-                    await curr.execute(query)
+                    await curr.execute(query, (source, source))
                     records = await curr.fetchall()
                     if records:
                         return [record[0] for record in records]

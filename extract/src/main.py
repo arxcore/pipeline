@@ -117,7 +117,7 @@ def build_args() -> argparse.ArgumentParser:
     source_group.add_argument(
         "--source",
         nargs="+",
-        choices=["bls", "bea", "fred", "all"],
+        choices=["bls", "bea", "fred"],
         default=None,
         help="Specific source to fetch (default: all)",
     )
@@ -214,9 +214,6 @@ def valid_args() -> argparse.Namespace | None:
         logger.warning("persist_stg invalid stage")
         parser.print_help()
         sys.exit(1)
-
-    if args.run == "all" and args.source is None:
-        args.source = "all"
 
     return args
 

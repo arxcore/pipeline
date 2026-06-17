@@ -82,23 +82,20 @@ class LoadStg:
                             item.frequency,
                             item.method,
                             item.unit,
-                            Json(
-                                [
+                            Json(notes)
+                            if (
+                                notes := [
                                     {"ref": f.code, "text": f.text}
                                     for f in (item.footnotes_note or [])
                                     if f.code and f.text
                                 ]
                             )
-                            if item.footnotes_note
                             else None,
                             item.description,
                             item.processed,
                         )
                         for item in data.staging_result
                     ]
-                    from rich import print
-
-                    print(rows)
                     logger.info("Loading %s rows to database...", len(rows))
                     try:
                         await acur.executemany(

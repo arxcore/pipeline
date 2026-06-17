@@ -75,7 +75,7 @@ class LoadRaw:
                                 """,
                             [(Json(payload),) for payload in data],
                         )
-                        logger.info("Data loaded successfully %s rows", len(data))
+                        logger.info("Data loaded successfully %s indicators", len(data))
 
                     except psycopg_pool.PoolTimeout:
                         logger.error(
