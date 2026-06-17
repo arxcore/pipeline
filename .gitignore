@@ -140,6 +140,7 @@ indicators_cache.json
 # ===================
 scripts/tools
 scripts/
+transform/
 
 # ===================
 # Ignore vendored plugin manager
