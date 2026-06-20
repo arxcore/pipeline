@@ -8,7 +8,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def run_all_chain(manager: FlowsManager, export_json: bool, source: list[str]):
+async def run_all_chain(
+    manager: FlowsManager,
+    export_json: bool,
+    source: list[str],
+    country: str,
+    indicator: str,
+):
     """Running all indicator with all chain process, from fetch, loadraw, parse, staging"""
     # raw data from API
     raw = await manager.run_all(source)
@@ -22,7 +28,9 @@ async def run_all_chain(manager: FlowsManager, export_json: bool, source: list[s
     await manager.load_raw.load_raw_respons([data.fetch_result for data in raw])
 
     # parse data from raw data
-    await manager.parsing_all_db(export_json, source, persist_stg=True)
+    await manager.parsing_all_db(
+        export_json, source, country, indicator, persist_stg=True
+    )
 
 
 async def run_single_all_chain(

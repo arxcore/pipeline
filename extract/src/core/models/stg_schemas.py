@@ -8,14 +8,14 @@ class StagingItems(BaseModel):
     date: date
     year: int
     source: str
-    code: str
+    code: str | None
     indicator: str
     country: str
     category: str
     value: Decimal
     frequency: str
     method: str
-    unit: str
+    unit: str | None
     footnotes_note: list[Any] | None = None
     processed: datetime
     description: str

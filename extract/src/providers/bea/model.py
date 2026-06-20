@@ -3,7 +3,9 @@ from providers import BaseMetaModel
 
 
 class BEAConfigModel(BaseMetaModel):
-    pass
+    dataset: str
+    table: str | None = None
+    line_number: str | None = None
     # method: Literal[
     #     "GetDatasetList", "GetParameterList", "GetParameterValues", "GetData"
     # ]

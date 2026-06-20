@@ -8,7 +8,6 @@ import traceback
 from config.settings import CONN_STR
 from typing import Optional
 from core.cli import PipelineCliParser
-from core.models import FinalresultFetcher
 from config.metadata.load_yaml import load_all_indicator
 import argparse
 from core.process.parse import ParseProcessors
@@ -99,13 +98,6 @@ def build_args() -> argparse.ArgumentParser:
     run_mode.add_argument(
         "--list", action="store_true", help="list of available indicators"
     )
-    run_mode.add_argument(
-        "-r",
-        "--run",
-        choices=["single", "all"],
-        default="all",
-        help="Execution Pipeline Mode, Default: all",
-    )
 
     # single run args
     single_group = parse.add_argument_group("single indiator mode (only for -r single")
@@ -117,7 +109,7 @@ def build_args() -> argparse.ArgumentParser:
     source_group.add_argument(
         "--source",
         nargs="+",
-        choices=["bls", "bea", "fred"],
+        choices=["bls", "bea", "fred", "ons"],
         default=None,
         help="Specific source to fetch (default: all)",
     )
@@ -145,9 +137,6 @@ def build_args() -> argparse.ArgumentParser:
     )
 
     utils_group.add_argument(
-        "--stdout", action="store_true", help="print results to consol"
-    )
-    utils_group.add_argument(
         "--persist-raw", action="store_true", help="write raw respons into DB"
     )
     utils_group.add_argument(
@@ -165,7 +154,7 @@ def valid_args() -> argparse.Namespace | None:
         list_of_indicators()
         return None
     # single mode Validation
-    if args.run == "single":
+    if args.name:
         if args.source is not None:
             logger.error("single run no options source")
             parser.print_help()
@@ -174,12 +163,9 @@ def valid_args() -> argparse.Namespace | None:
             logger.error("country is required in single run")
             parser.print_help()
             sys.exit(1)
-        if not args.name:
-            logger.error("name is required in single run")
-            parser.print_help()
-            sys.exit(1)
+
         if not valid_input(args.country, indicator_name=args.name):
-            logger.error(f"indciator {args.name}, country {args.country} not found")
+            logger.error(f"indicator {args.name}, country {args.country} not found")
             parser.print_help()
             sys.exit(1)
 
@@ -193,6 +179,12 @@ def valid_args() -> argparse.Namespace | None:
         logger.warning("Replay mode cannot be used with persist options")
         parser.print_help()
         sys.exit(1)
+
+    if args.source and (args.country or args.name):
+        logger.warning("filter source no options country or indicator -_")
+        parser.print_help()
+        sys.exit(1)
+
     # If export json, replay and dry run mode, persist raw and stg should be false
     # because export json is for inspect data structure and pipeline state, not for persist data or replay data
     if args.export_json and (args.persist_raw or args.persist_stg):
@@ -218,7 +210,7 @@ def valid_args() -> argparse.Namespace | None:
     return args
 
 
-async def main() -> FinalresultFetcher | None:
+async def main():
     """Main Execute command line pipeline"""
     args = valid_args()
 
@@ -247,6 +239,12 @@ async def main() -> FinalresultFetcher | None:
             orchest: PipelineCliParser = build_injection(pool)
 
             async with orchest as orch:
+                # table create
+                await orch.flows.load_raw.create_register_path_table()
+                await orch.flows.load_raw.create_raw_respons_table()
+                await orch.flows.load_stg.create_stg_table()
+
+                # Execution
                 await orch.runner(args)
 
     except exc.PipelineCrash as e:

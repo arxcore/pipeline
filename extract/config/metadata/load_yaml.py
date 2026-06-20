@@ -1,5 +1,6 @@
 import yaml
 from pathlib import Path
+from src.providers.ons.model import ONSConfigModel
 from src.providers.bls.model import BLSConfigModel
 from src.providers.bea.model import BEAConfigModel
 from src.providers.fred.model import FREDConfigModel
@@ -9,6 +10,7 @@ MODEL_MAP: dict[str, type[BaseMetaModel]] = {
     "bls": BLSConfigModel,
     "bea": BEAConfigModel,
     "fred": FREDConfigModel,
+    "ons": ONSConfigModel,
 }
 
 IndicatorModel = BaseMetaModel
@@ -17,6 +19,7 @@ CountryModel = dict[str, CategoryModel]
 AllIndicatorsModel = dict[str, CountryModel]
 
 DIR_PATH = Path(__file__).resolve().parents[0]
+DIR_PATH.mkdir(parents=True, exist_ok=True)
 
 
 def load_all_indicator() -> AllIndicatorsModel:

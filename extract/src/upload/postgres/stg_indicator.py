@@ -39,7 +39,7 @@ class LoadStg:
                 async with aconn.cursor() as cur:
                     await cur.execute(
                         """
-                        CREATE TABLE IF NOT EXISTS stg_indicators (
+                        CREATE TABLE IF NOT EXISTS staging_indicators (
                             id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                             date DATE NOT NULL,
                             year INTEGER,
@@ -59,48 +59,51 @@ class LoadStg:
                         );
                         -- index dasbord
                         CREATE INDEX IF NOT EXISTS idx_stg_lookup
-                        ON stg_indicators (code, country, date)
+                        ON staging_indicators (code, country, date)
                         """
                     )
 
     async def load_stg_indicator(self, data: StagingData):
         """Load Data"""
-
-        async with self.pool.connection() as aconn:  # create AsyncConnection from pool
-            async with aconn:  # ensure transaction is properly closed after use
-                async with aconn.cursor() as acur:  # create AsyncCursor from connection
-                    rows = [
-                        (
-                            item.date,
-                            item.year,
-                            item.source,
-                            item.code,
-                            item.indicator,
-                            item.value,
-                            item.country,
-                            item.category,
-                            item.frequency,
-                            item.method,
-                            item.unit,
-                            Json(notes)
-                            if (
-                                notes := [
-                                    {"ref": f.code, "text": f.text}
-                                    for f in (item.footnotes_note or [])
-                                    if f.code and f.text
-                                ]
+        try:
+            async with (
+                self.pool.connection() as aconn
+            ):  # create AsyncConnection from pool
+                async with aconn:  # ensure transaction is properly closed after use
+                    async with (
+                        aconn.cursor() as acur
+                    ):  # create AsyncCursor from connection
+                        rows = [
+                            (
+                                item.date,
+                                item.year,
+                                item.source,
+                                item.code,
+                                item.indicator,
+                                item.value,
+                                item.country,
+                                item.category,
+                                item.frequency,
+                                item.method,
+                                item.unit,
+                                Json(notes)
+                                if (
+                                    notes := [
+                                        {"ref": f.code, "text": f.text}
+                                        for f in (item.footnotes_note or [])
+                                        if f.code and f.text
+                                    ]
+                                )
+                                else None,
+                                item.description,
+                                item.processed,
                             )
-                            else None,
-                            item.description,
-                            item.processed,
-                        )
-                        for item in data.staging_result
-                    ]
-                    logger.info("Loading %s rows to database...", len(rows))
-                    try:
+                            for item in data.staging_result
+                        ]
+                        logger.info("Loading %s rows to database...", len(rows))
                         await acur.executemany(
                             """
-                                    INSERT INTO stg_indicators (
+                                    INSERT INTO staging_indicators (
                                         date, year, source, code, indicator, value, country, category, frequency, method, unit, footnotes_note, description, processed
                                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                                     ON CONFLICT (date, source, code, country, frequency)
@@ -111,20 +114,14 @@ class LoadStg:
                                     """,
                             rows,
                         )
-                        logger.info("Data loaded successfully.")
+                        logger.info("Data loaded successfully.", len(rows))
 
-                    except psycopg_pool.PoolTimeout:
-                        logger.error(
-                            "Connection pool timeout while trying to load data."
-                        )
-                        raise SystemExit(1)
-                    except psycopg_pool.PoolClosed as e:
-                        logger.error(
-                            "Connection pool is closed while trying to load data: %s", e
-                        )
-                        raise SystemExit(1)
-                    except psycopg.OperationalError as e:
-                        logger.error(
-                            "Operational error while trying to load data: %s", e
-                        )
-                        raise SystemExit(1)
+        except psycopg_pool.PoolTimeout as e:
+            logger.error("Connection pool timeout while trying to load data.", e)
+            raise SystemExit(1)
+        except psycopg_pool.PoolClosed as e:
+            logger.error("Connection pool is closed while trying to load data: %s", e)
+            raise SystemExit(1)
+        except psycopg.OperationalError as e:
+            logger.error("Operational error while trying to load data: %s", e)
+            raise SystemExit(1)

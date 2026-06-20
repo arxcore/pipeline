@@ -7,12 +7,11 @@ from tenacity import (
     stop_after_attempt,
 )
 from providers.metamodel import BaseMetaModel
-from providers.bls.model import BLSRawResponsedata
 import logging
 import aiohttp
 import monitoring.exc_models as exc
 from providers.retry_http import Retryable
-from typing import Callable, cast
+from typing import Any, Callable, cast
 import asyncio
 from providers.share_state import ExternalLimit
 
@@ -48,7 +47,9 @@ class BLSProvider:
     async def fetch_data(
         self,
         meta: BaseMetaModel,
-    ) -> BLSRawResponsedata | None:
+        category: str | None = None,
+        country: str | None = None,
+    ) -> dict[str, Any] | None:
         limit_event = ExternalLimit.get(meta.source)
         # check the new assigment has arrived to the event loop and if the limit is reached before acquiring the semaphore
         if limit_event.is_set():

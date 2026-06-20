@@ -1,5 +1,5 @@
 from decimal import Decimal
-from core.models import FinalresultParse, FinalresultFetcher
+from core.models import ParseResult, ApiResult
 from providers.bea.model import BEARawRespons
 import logging
 from core.parsers.registry import Frequency, Providers, register
@@ -10,12 +10,12 @@ logger = logging.getLogger(__name__)
 
 
 @register(Providers.bea, Frequency.qsa)
-def parse_qsa_bea(data: FinalresultFetcher) -> FinalresultParse:
+def parse_qsa_bea(data: ApiResult) -> ParseResult:
     """
     Parse data QuarterlySeasonallyAdjusted
     Return dict[str, float]
     """
-    RAW_DATA = BEARawRespons.model_validate(data.fetch_result)
+    RAW_DATA = BEARawRespons.model_validate(data.source_data)
 
     logger.debug(
         "Parse data BEA QSA, Accept %s data, Sample: %s",
@@ -54,4 +54,4 @@ def parse_qsa_bea(data: FinalresultFetcher) -> FinalresultParse:
     if missing_value:
         logger.warning("Total Missing value for data %s", len(missing_value))
 
-    return FinalresultParse(parse_result=parse_data)
+    return ParseResult(parse_result=parse_data)

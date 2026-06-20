@@ -27,3 +27,13 @@ AverageHourlyEarnings:
   freq: monthly
   unit: "%"
   description: "Average Hourly Earnings, Month-over-Month Change"
+
+InitialJoblessClaim:
+  code_name: "ICSA"
+  source: fred
+  start_year: 2025
+  start_month: 1
+  calc: raw
+  freq: weekly
+  unit: People
+  description: "Initial Jobless Claims, Seasonally Adjusted"

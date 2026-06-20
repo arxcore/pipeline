@@ -1,4 +1,4 @@
 from .stg_schemas import StagingItems, StagingData
-from .pipeline_schemas import FinalresultFetcher, FinalresultParse
+from .pipeline_schemas import ApiResult, ParseResult
 
-__all__ = ["StagingData", "StagingItems", "FinalresultFetcher", "FinalresultParse"]
+__all__ = ["StagingData", "StagingItems", "ApiResult", "ParseResult"]

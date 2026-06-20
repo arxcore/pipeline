@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import logging
-from core.models.pipeline_schemas import FinalresultParse
+from core.models.pipeline_schemas import ParseResult
 from core.models.stg_schemas import StagingData, StagingItems
 import monitoring.exc_models as exc
 
@@ -11,11 +11,11 @@ def staging_result(
     name: str,
     category: str,
     country: str,
-    parsed: FinalresultParse,
+    parsed: ParseResult,
     source: str,
-    code_name: str,
+    code_name: str | None,
     calc: str,
-    unit: str,
+    unit: str | None,
     description: str,
     freq: str,
 ) -> StagingData:

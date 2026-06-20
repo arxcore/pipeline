@@ -1,11 +1,10 @@
 from ._fetch import (
     fetch_config_indicators,
-    single_fetch,
+    load_raw_result,
     run_all,
-    orchest_single_fetch,
     orchest_all_fetch,
 )
-from ._parser import parsing_db, parsing_all_db
+from ._parser import parsing_all_db
 from ._chain import run_all_chain, run_single_all_chain
 from ._utils import PipelineFilter
 from upload.postgres import LoadRaw, LoadStg, FetchDB
@@ -14,7 +13,11 @@ from core.process.raw import RawProcessors
 from config.metadata.load_yaml import load_all_indicator
 from typing import Optional, Any
 from types import TracebackType
-from core.models.pipeline_schemas import FinalresultFetcher, FinalresultParse
+from core.models.pipeline_schemas import (
+    Fetchresult,
+    ApiResult,
+    ParseResult,
+)
 from core.models.parsing_schemas import ParsedItems
 from datetime import datetime
 import logging
@@ -66,32 +69,46 @@ class FlowsManager:
         self,
         data: list[ParsedItems]
         | dict[str, Any]
-        | FinalresultParse
-        | FinalresultFetcher,
+        | list[dict[str, Any]]
+        | ParseResult
+        | ApiResult
+        | list[ApiResult]
+        | None,
         name: str = "datas",
     ) -> None:
         """Export data to json file for debugging and testing purpose"""
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M")
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         directory = Path("exported_data")
         id = random.randint(1, 100000)
         filename = f"{id}_{name}_{timestamp}.json"
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / filename
         try:
-            if isinstance(data, FinalresultParse):
+            if data is None:
+                return None
+
+            if isinstance(data, ParseResult):
                 serialize = [item.model_dump(mode="json") for item in data.parse_result]
                 with open(path, "w") as f:
                     json.dump(serialize, f, indent=4)
 
-            elif isinstance(data, FinalresultFetcher):
-                serialize = [item.model_dump(mode="json") for item in data.fetch_result]
+            elif isinstance(data, ApiResult):
+                serialize = [item for item in data.model_dump(mode="json")]
                 with open(path, "w") as f:
                     json.dump(serialize, f, indent=4)
             elif isinstance(data, list):
-                serialize = [item.model_dump(mode="json") for item in data]
+                if isinstance(data, ParsedItems):
+                    serialize = [item for item in data.model_dump(mode="json")]
+                    with open(path, "w") as f:
+                        json.dump(serialize, f, indent=4)
+                if isinstance(data, ApiResult):
+                    serialize = [item for item in data.model_dump(mode="json")]
+                    with open(path, "w") as f:
+                        json.dump(serialize, f, indent=4)
+
+                serialize = [item for item in data]
                 with open(path, "w") as f:
                     json.dump(serialize, f, indent=4)
-
             else:
                 with open(path, "w") as f:
                     json.dump(data, f, indent=4)
@@ -100,80 +117,49 @@ class FlowsManager:
             return
         logger.info("Data exported to %s", path)
 
-    async def utils_field(self, name: str, country: str) -> dict[str, Any] | None:
-        # FIXME: DUO handling field
-        data = await self.fetch_db.fetch_database(name, country)
-        if data is None:
-            return None
-
-        try:
-            raw_db = data["source_data"]
-            raw = FinalresultFetcher(fetch_result=raw_db)
-            source = data["meta"]["source"]
-            freq = data["meta"]["freq"]
-            code = data["meta"]["code_name"]
-            calc = data["meta"]["calc"]
-            unit = data["meta"]["unit"]
-            description = data["meta"].get("description", "")
-            category = data["meta"]["category"]
-            fields = {
-                "raw": raw,
-                "source": source,
-                "freq": freq,
-                "code": code,
-                "calc": calc,
-                "unit": unit,
-                "description": description,
-                "category": category,
-            }
-            return fields
-        except KeyError as e:
-            logger.error(
-                "Missing expected field in database data for %s, country %s: %s",
-                name,
-                country,
-                e,
-            )
-            return None
-
     async def fetch_config_indicator(self, filter: PipelineFilter):
         return await fetch_config_indicators(self, filter)
 
-    async def run_all(self, source: list[str]):
-        return await run_all(self, source)
-
-    async def single_fetch(self, name: str, country: str):
-        return await single_fetch(self, name, country)
-
-    async def parsing_db(
-        self, country: str, name: str, export_json: bool, persist_stg: bool
+    async def run_all(
+        self,
+        country: str | None = None,
+        indicator: str | None = None,
+        source: list[str] | None = None,
     ):
-        return await parsing_db(self, country, name, export_json, persist_stg)
+        return await run_all(self, country, indicator, source)
 
     async def parsing_all_db(
-        self, export_json: bool, source: list[str], persist_stg: bool
+        self,
+        export_json: bool,
+        source: list[str],
+        country: str,
+        indicator: str,
+        persist_stg: bool,
     ):
-        return await parsing_all_db(self, export_json, source, persist_stg)
+        return await parsing_all_db(
+            self, export_json, source, country, indicator, persist_stg
+        )
 
-    async def run_all_chain(self, export_json: bool, source: list[str]):
-        return await run_all_chain(self, export_json, source)
+    async def run_all_chain(
+        self, export_json: bool, source: list[str], country: str, indicator: str
+    ):
+        return await run_all_chain(self, export_json, source, country, indicator)
 
     async def run_single_all_chain(self, country: str, name: str, export_json: bool):
         return await run_single_all_chain(self, country, name, export_json)
 
-    async def orchest_single_fetch(
+    async def orchest_all_fetch(
         self,
-        country: str,
-        name: str,
         persist_raw: bool,
-        export_json: bool,
         replay: bool,
+        export_json: bool,
+        source: list[str],
+        country: str,
+        indicator: str,
     ):
-        return await orchest_single_fetch(
-            self, country, name, persist_raw, export_json, replay
+        return await orchest_all_fetch(
+            self, persist_raw, replay, export_json, source, country, indicator
         )
 
-    async def orchest_all_fetch(
-        self, persist_raw: bool, replay: bool, export_json: bool, source: list[str]
-    ):
-        return await orchest_all_fetch(self, persist_raw, replay, export_json, source)
+    async def load_raw_result(self, data: Fetchresult):
+        return await load_raw_result(self, data)

@@ -1,0 +1,59 @@
+CPI_YoY:
+  url: "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/d7g7/mm23"
+  code_name: "D7G7"
+  source: ons
+  freq: "monthly"
+  calc: "yoy"
+  start_year: 2024
+  start_month: 3
+  description: "CPI Annual Rate - All Items 2015=100"
+
+CoreCPI_YoY:
+  url: "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/dko9/mm23"
+  code_name: "DKO9"
+  source: ons
+  freq: "monthly"
+  calc: "yoy"
+  start_year: 2024
+  start_month: 3
+  description: "CPI 12mth - Excluding Energy & Unprocessed Food 2015=100"
+
+CPI_MoM:
+  url: "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/d7oe/mm23"
+  code_name: "D7OE"
+  source: ons
+  freq: "monthly"
+  calc: "mom"
+  start_year: 2024
+  start_month: 3
+  description: "CPI Monthly Rate - All Items 2015=100"
+
+CoreCPI_MoM:
+  url: "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/dkc7/mm23"
+  code_name: "DKC7"
+  source: ons
+  freq: "monthly"
+  calc: "mom"
+  start_year: 2024
+  start_month: 3
+  description: "CPI Index - Excluding Energy & Unprocessed Food 2015=100"
+
+PPI_Input_YoY:
+  url: "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/ghik/ppi"
+  code_name: "GHIK"
+  source: ons
+  freq: "monthly"
+  calc: "yoy"
+  start_year: 2020
+  start_month: 3
+  description: "PPI Input - Materials for Manufacturing (excl. Climate Change Levy) 2015=100"
+
+PPI_Output_MoM:
+  url: "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/gb7s/mm22"
+  code_name: "GB7S"
+  source: ons
+  freq: "monthly"
+  calc: "mom"
+  start_year: 2023
+  start_month: 3
+  description: "PPI Output Domestic - Manufactured Products (excl. Duty) 2015=100"

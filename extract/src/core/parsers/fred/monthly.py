@@ -1,7 +1,7 @@
 from decimal import Decimal
 from core.models.parsing_schemas import ParsedItems
 from providers.fred import FREDRawResponse
-from core.models import FinalresultParse, FinalresultFetcher
+from core.models import ParseResult, ApiResult
 import logging
 from core.parsers.registry import register, Providers, Frequency
 import monitoring.exc_models as exc
@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 @register(Providers.fred, Frequency.monthly)
-def parse_monthly_fred(data: FinalresultFetcher) -> FinalresultParse:
-    # Validation FinalresultFetcher
-    RAW_DATA = FREDRawResponse.model_validate(data.fetch_result)
+def parse_monthly_fred(data: ApiResult) -> ParseResult:
+    # Validation ApiResult
+    RAW_DATA = FREDRawResponse.model_validate(data.source_data)
 
     logger.debug("FRED Parsing Accept %s Data", len(RAW_DATA.observations))
     result: list[ParsedItems] = []
@@ -30,4 +30,4 @@ def parse_monthly_fred(data: FinalresultFetcher) -> FinalresultParse:
             raise exc.FREDParserError(f"Parsing FRED Unknown ERROR {e}") from e
 
     logger.debug("Parsing monthly done with %s Data", len(result))
-    return FinalresultParse(parse_result=result)
+    return ParseResult(parse_result=result)

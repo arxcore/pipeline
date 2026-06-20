@@ -2,7 +2,6 @@ from datetime import datetime
 import logging
 from pydantic import ValidationError
 from providers import BaseMetaModel
-from providers.fred.model import FREDRawResponse
 import aiohttp
 from tenacity import (
     retry,
@@ -12,7 +11,7 @@ from tenacity import (
 )
 import monitoring.exc_models as exc
 from providers.retry_http import Retryable
-from typing import Callable, cast
+from typing import Any, Callable, cast
 import asyncio
 
 logger = logging.getLogger(__name__)
@@ -44,7 +43,12 @@ class FREDProvider:
         retry=retry_if_exception(cast(Callable[[BaseException], bool], Retryable)),
         reraise=True,
     )
-    async def fetch_data(self, meta: BaseMetaModel) -> FREDRawResponse:
+    async def fetch_data(
+        self,
+        meta: BaseMetaModel,
+        category: str | None = None,
+        country: str | None = None,
+    ) -> dict[str, Any]:
         """Fetch FRED Data"""
 
         # chekc api key
@@ -58,7 +62,7 @@ class FREDProvider:
         end_year = datetime.now().strftime("%Y-%m-%d")
 
         # build params
-        params: dict[str, str] = {
+        params: dict[str, str | None] = {
             "api_key": self.api_key,
             "file_type": "json",
             "series_id": meta.code_name,
@@ -69,10 +73,15 @@ class FREDProvider:
         if not self.session:
             raise exc.FREDRequestsError("HTTP FRED Session not initialized")
 
+        # handel empty params
+        clean_params = {k: v for k, v in params.items() if v is not None}
+
         try:
             async with self.semaphore:
                 async with self.session.get(
-                    self.url, params=params, timeout=aiohttp.ClientTimeout(total=30)
+                    self.url,
+                    params=clean_params,
+                    timeout=aiohttp.ClientTimeout(total=30),
                 ) as response:
                     # 4xx, 5xx
                     response.raise_for_status()

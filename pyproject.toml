@@ -29,6 +29,7 @@ dependencies = [
     "prettier (>=0.0.7,<0.0.8)",
     "dbt-core (>=1.11.11,<2.0.0)",
     "dbt-postgres (>=1.10.0,<2.0.0)",
+    "polars[calamine,rt64] (>=1.41.2,<2.0.0)",
 ]
 
 [dependency-groups]

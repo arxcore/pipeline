@@ -7,3 +7,13 @@ Retail_Sales_MoM:
   start_month: 2
   unit: "%"
   description: "Retail Sales, Month-over-Month Change"
+
+Michigan_Consumer_Sentiment:
+  code_name: "UMCSENT"
+  source: fred
+  calc: raw
+  freq: monthly
+  start_year: 2024
+  start_month: 3
+  unit: index
+  description: "University of Michigan Consumer Sentiment Index"

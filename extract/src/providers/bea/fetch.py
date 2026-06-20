@@ -1,7 +1,6 @@
 from datetime import datetime
 import aiohttp
-from pydantic import ValidationError
-from providers.bea.model import BEARawRespons
+from src.providers.bea.model import BEAConfigModel
 from providers import BaseMetaModel
 import logging
 from tenacity import (
@@ -11,9 +10,10 @@ from tenacity import (
     wait_exponential,
 )
 import monitoring.exc_models as exc
-from typing import Callable, cast
+from typing import Any, Callable, cast
 from providers.retry_http import Retryable
 import asyncio
+from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +53,16 @@ class BEAProvider:
         retry=retry_if_exception(cast(Callable[[BaseException], bool], Retryable)),
         reraise=True,
     )
-    async def fetch_data(self, meta: BaseMetaModel) -> BEARawRespons:
+    async def fetch_data(
+        self,
+        meta: BaseMetaModel,
+        category: str | None = None,
+        country: str | None = None,
+    ) -> dict[str, Any]:
         """Fetch data from BEA API"""
+        # validate BEAConfigModel
+        if not isinstance(meta, BEAConfigModel):
+            raise TypeError("BEAProvider expect BEAConfigModel got %s", type(meta))
 
         # Check api key if not exists
         if not self.api_key:
@@ -64,17 +72,25 @@ class BEAProvider:
         start_range = list(range(meta.start_year, datetime.now().year + 1))
         start_to_end = ",".join(str(y) for y in start_range)
 
-        # build params
-        params = {
+        params: dict[str, str | None] = {
             "UserID": self.api_key,
             "method": "GetData",
-            "DataSetName": "ITA",
-            "Indicator": meta.code_name,
-            "AreaOrCountry": "AllCountries",
             "Year": start_to_end,
             "Frequency": meta.freq,
             "ResultFormat": "JSON",
         }
+        if meta.dataset == "ITA":
+            params.update({"DataSetName": meta.dataset})
+            params.update({"AreaOrCountry": "AllCountries"})
+            params.update({"Indicator": meta.code_name})
+
+        if meta.dataset == "NIPA":
+            params.update({"DataSetName": meta.dataset})
+            params.update({"TableName": meta.table})
+            params.update({"LineNumber": meta.line_number})
+
+        # skip None Paramas
+        filter_params = {k: v for k, v in params.items() if v is not None}
 
         if not self.session:
             raise exc.BEARequestsError("connection HTTP BEA Session is Not Initialized")
@@ -83,7 +99,9 @@ class BEAProvider:
             async with self.semaphore:
                 # aiiohttp Context Manager
                 async with self.session.get(
-                    self.url, params=params, timeout=aiohttp.ClientTimeout(total=30)
+                    self.url,
+                    params=filter_params,
+                    timeout=aiohttp.ClientTimeout(total=30),
                 ) as response:
                     # Retry if status code http >= 500
                     # 4xx, 5xx

@@ -17,3 +17,55 @@ CoreCPI_YoY:
   calc: yoy
   unit: "%"
   description: "Core Consumer Price Index, Year-over-Year Change"
+
+CPI_MoM:
+  code_name: "CUUR0000SA0"
+  source: bls
+  freq: monthly
+  start_year: 2023
+  start_month: 2
+  calc: mom
+  unit: "%"
+  description: "Consumer Price Index, Month-over-Month Change"
+
+CoreCPI_MoM:
+  code_name: "CUUR0000SA0L1E"
+  source: bls
+  freq: monthly
+  start_year: 2023
+  start_month: 2
+  calc: mom
+  unit: "%"
+  description: "Core Consumer Price Index, Month-over-Month Change"
+
+PPI_YoY:
+  code_name: "WPUFD4"
+  source: bls
+  freq: monthly
+  start_year: 2022
+  start_month: 3
+  calc: yoy
+  unit: "%"
+  description: "Producer Price Index, Year-over-Year Change"
+
+PPI_MoM:
+  code_name: "WPUFD4"
+  source: bls
+  freq: monthly
+  start_year: 2023
+  start_month: 2
+  calc: mom
+  unit: "%"
+  description: "Producer Price Index, Month-over-Month Change"
+
+Core_PCE_MoM:
+  source: bea
+  dataset: "NIPA"
+  table: "T20807"
+  freq: M
+  start_year: 2023
+  start_month: 3
+  calc: raw
+  line_number: "25"
+  unit: "%"
+  description: "Core Personal Consumption Expenditures Price Index, Month-over-Month Change"

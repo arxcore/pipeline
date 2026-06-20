@@ -1,4 +1,4 @@
-from core.models import FinalresultFetcher, FinalresultParse
+from core.models import ApiResult, ParseResult
 import logging
 from core.parsers.registry import PARSE_REGISTER
 import monitoring.exc_models as exc
@@ -10,8 +10,8 @@ class ParseProcessors:
     """Handling Parse Data with Diverent Frequency"""
 
     def parse_data(
-        self, raw_data: FinalresultFetcher, api: str, freq: str | None = None
-    ) -> FinalresultParse:
+        self, raw_data: ApiResult, api: str, freq: str | None = None
+    ) -> ParseResult:
         """Process Parse Data by api Type"""
 
         logger.info("Parsing data for %s with frequency %s", api, freq)

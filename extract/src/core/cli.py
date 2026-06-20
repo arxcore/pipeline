@@ -28,50 +28,30 @@ class PipelineCliParser:
 
     async def runner(self, args: argparse.Namespace):
         """Execute cli runner Pipeline"""
-        match args.run:
-            case "single":
-                match args.stage:
-                    case "fetch":
-                        await self.flows.orchest_single_fetch(
-                            args.country,
-                            args.name,
-                            persist_raw=args.persist_raw,
-                            export_json=args.export_json,
-                            replay=args.replay,
-                        )
-                    case "parse":
-                        await self.flows.parsing_db(
-                            args.country,
-                            args.name,
-                            export_json=args.export_json,
-                            persist_stg=args.persist_stg,
-                        )
-                    case "all":
-                        await self.flows.run_single_all_chain(
-                            args.country, args.name, export_json=args.export_json
-                        )
-                    case _:
-                        assert False, f"unhandel stage {args.stage}"
+        match args.stage:
+            case "fetch":
+                await self.flows.orchest_all_fetch(
+                    persist_raw=args.persist_raw,
+                    replay=args.replay,
+                    export_json=args.export_json,
+                    source=args.source,
+                    country=args.country,
+                    indicator=args.name,
+                )
+            case "parse":
+                await self.flows.parsing_all_db(
+                    export_json=args.export_json,
+                    source=args.source,
+                    country=args.country,
+                    indicator=args.name,
+                    persist_stg=args.persist_stg,
+                )
             case "all":
-                match args.stage:
-                    case "fetch":
-                        await self.flows.orchest_all_fetch(
-                            persist_raw=args.persist_raw,
-                            replay=args.replay,
-                            export_json=args.export_json,
-                            source=args.source,
-                        )
-                    case "parse":
-                        await self.flows.parsing_all_db(
-                            export_json=args.export_json,
-                            source=args.source,
-                            persist_stg=args.persist_stg,
-                        )
-                    case "all":
-                        await self.flows.run_all_chain(
-                            export_json=args.export_json, source=args.source
-                        )
-                    case _:
-                        assert False, f"unhandel stage {args.stage}"
+                await self.flows.run_all_chain(
+                    export_json=args.export_json,
+                    source=args.source,
+                    country=args.country,
+                    indicator=args.name,
+                )
             case _:
-                assert False, f"unhandel run {args.run}"
+                assert False, f"unhandel stage {args.stage}"

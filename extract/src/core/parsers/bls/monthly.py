@@ -1,6 +1,6 @@
 from decimal import Decimal
 import logging
-from core.models import FinalresultParse, FinalresultFetcher
+from core.models import ParseResult, ApiResult
 from core.models.parsing_schemas import ParsedItems
 from providers.bls.model import BLSRawResponsedata
 from core.parsers.registry import register, Providers, Frequency
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 @register(Providers.bls, Frequency.monthly)
-def parse_monthly_bls(data: FinalresultFetcher) -> FinalresultParse:
+def parse_monthly_bls(data: ApiResult) -> ParseResult:
     """
     Docstring for parse_monthly_bls
 
@@ -19,8 +19,8 @@ def parse_monthly_bls(data: FinalresultFetcher) -> FinalresultParse:
     Return dict[str, float]
     """
 
-    # Validation FinalresultFetcher
-    RAW_DATA = BLSRawResponsedata.model_validate(data.fetch_result)
+    # Validation ApiResult
+    RAW_DATA = BLSRawResponsedata.model_validate(data.source_data)
 
     parse_data: list[ParsedItems] = []
     error: list[str] = []
@@ -74,4 +74,4 @@ def parse_monthly_bls(data: FinalresultFetcher) -> FinalresultParse:
     if skip_value > 0:
         logger.info("skipping value  %s -> %s", skip_value, error)
 
-    return FinalresultParse(parse_result=parse_data)
+    return ParseResult(parse_result=parse_data)

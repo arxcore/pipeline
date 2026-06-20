@@ -1,14 +1,16 @@
+from pathlib import Path
 from config.settings import Resources
+from core.models.pipeline_schemas import FetchMeta, FileResult, ApiResult
 from providers.bls import BLSProvider
 from providers.fred import FREDProvider
 from providers.bea import BEAProvider
 from providers import BaseMetaModel
-from core.models import FinalresultFetcher
 import json
 import hashlib
 import logging
 from datetime import datetime, timezone
 import monitoring.exc_models as exc
+from providers.ons.fetch import ONSProvider
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +24,7 @@ class RawProcessors:
             "bls": BLSProvider(api_key=self.resource.bls_api_key),
             "bea": BEAProvider(api_key=self.resource.bea_api_key),
             "fred": FREDProvider(api_key=self.resource.fred_api_key),
+            "ons": ONSProvider(),
         }
 
     async def __aenter__(self):
@@ -56,7 +59,7 @@ class RawProcessors:
 
     async def process_raw_data(
         self, name: str, meta: BaseMetaModel, category: str, country: str
-    ) -> FinalresultFetcher | None:
+    ) -> ApiResult | FileResult | None:
         """Fetch Raw Data from ALL Prioviders"""
         logger.info("-" * 50)
         logger.info("Fetch data from %s, code %s", meta.source.upper(), meta.code_name)
@@ -70,7 +73,18 @@ class RawProcessors:
             raise KeyError(f"Source {meta.source} not Found")
         try:
             providers_cls = self.providerd[meta.source]
-            raw_data = await providers_cls.fetch_data(meta)
+            raw_data = await providers_cls.fetch_data(meta, category, country)
+
+            if isinstance(raw_data, Path):
+                return FileResult(
+                    file_path=raw_data,
+                    country=country,
+                    category=category,
+                    indicator=name,
+                    source=meta.source,
+                    code_name=meta.code_name,
+                )
+
             if raw_data is None:
                 logger.warning(
                     "No data fetched for Source %s, Code %s",
@@ -78,22 +92,20 @@ class RawProcessors:
                     meta.code_name,
                 )
                 return None
-            # unpact pydantic to json
-            payload_respons = {
-                "source_data": raw_data,
-                "meta": {
-                    "country": country,
-                    "category": category,
-                    "indicator": name,
+
+            return ApiResult(
+                source_data=raw_data,
+                meta=FetchMeta(
+                    country=country,
+                    category=category,
+                    indicator=name,
                     **meta.model_dump(mode="json"),
-                    "load_at": datetime.now(timezone.utc).isoformat(),
-                    "checksum": hashlib.sha256(
+                    load_at=datetime.now(timezone.utc).isoformat(),
+                    checksum=hashlib.sha256(
                         json.dumps(raw_data, sort_keys=True).encode()
                     ).hexdigest(),
-                },
-            }
-
-            return FinalresultFetcher(source=meta.source, fetch_result=payload_respons)
+                ),
+            )
 
         except exc.FetchDataError:
             logger.exception("Error Fetch Data from Source %s", meta.source)
