@@ -106,8 +106,12 @@ class LoadRaw:
                                     country TEXT NOT NULL,
                                     category TEXT NOT NULL,
                                     indicator TEXT NOT NULL,
+                                    frequency TEXT NOT NULL,
                                     source TEXT NOT NULL,
                                     code_name TEXT NOT NULL,
+                                    calc TEXT NOT NULL,
+                                    unit TEXT,
+                                    description TEXT NOT NULL,
                                     load_at TIMESTAMPTZ DEFAULT NOW(),
                                     UNIQUE (file_path, country, category, indicator)
                                 );
@@ -135,17 +139,22 @@ class LoadRaw:
                                 item.country,
                                 item.category,
                                 item.indicator,
+                                item.freq,
                                 item.source,
                                 item.code_name,
+                                item.calc,
+                                item.unit,
+                                item.description,
                             )
                             for item in data
                         ]
+
                         logger.info("Loading %s rows to databse..", len(rows))
                         await acur.executemany(
                             """
                             INSERT INTO file_registry
-                                (file_path, file_ext, country, category, indicator, source, code_name)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                (file_path, file_ext, country, category, indicator, frequency, source, code_name, calc, unit, description)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             ON CONFLICT (file_path, country, category, indicator)
                             DO NOTHING
                             """,

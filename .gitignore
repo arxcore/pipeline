@@ -151,3 +151,4 @@ platform/service/Datafetcher/.personal/quest/note.txt
 platform/service/Datafetcher/.personal/quest/todo.json
 platform/service/Datafetcher/.personal/quest/todo.json
 dotfile/to-do/daily_task/daily_tasks.json
+.aider*

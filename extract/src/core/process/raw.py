@@ -83,6 +83,10 @@ class RawProcessors:
                     indicator=name,
                     source=meta.source,
                     code_name=meta.code_name,
+                    freq=meta.freq,
+                    calc=meta.calc,
+                    unit=meta.unit,
+                    description=meta.description,
                 )
 
             if raw_data is None:

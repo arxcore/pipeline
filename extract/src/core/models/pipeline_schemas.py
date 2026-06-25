@@ -21,13 +21,17 @@ class ApiResult(BaseModel):
     meta: FetchMeta
 
 
-class FileResult(BaseModel):
+class FileResult(BaseMetaModel):
     file_path: Path
+    file_ext: str | None = None
     country: str
     category: str
     indicator: str
-    source: str
+    # source: str
     code_name: str | None = None
+    # freq: str
+    # calc: str
+    # optional
 
 
 class ParseResult(BaseModel):

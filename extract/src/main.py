@@ -12,9 +12,9 @@ from config.metadata.load_yaml import load_all_indicator
 import argparse
 from core.process.parse import ParseProcessors
 from core.process.raw import RawProcessors
-from monitoring.logs import apply_log_level, resolve_log_level
 from core.flows import FlowsManager
 import monitoring.exc_models as exc
+from monitoring.logs.setup import apply_log_level, resolve_log_level
 from upload.postgres import LoadRaw, LoadStg, FetchDB
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,6 @@ def build_injection(
     pool: AsyncConnectionPool[AsyncConnection[TupleRow]],
 ) -> PipelineCliParser:
     """Build Dependency Injection for Pipeline"""
-    # Cofigure Connection Pool for Upload Data to Postgres
     stg_db = LoadStg(pool)
     raw_db = LoadRaw(pool)
     procc_raw = RawProcessors()
@@ -37,7 +36,7 @@ def build_injection(
 
 
 def list_of_indicators() -> None:
-    """list available indicators"""
+    """List available indicators"""
 
     for country, category in ALL_INDICATORS.items():
         print(f"\n-{country}:")
@@ -54,7 +53,17 @@ def valid_input(
     category: Optional[str] = None,
     indicator_name: Optional[str] = None,
 ) -> bool:
-    """Validation Input Country, Category and Indicators"""
+    """
+    Validate input parameters.
+
+    Args:
+        country (str): The country of the indicator.
+        category (Optional[str]): The category of the indicator.
+        indicator_name (Optional[str]): The name of the indicator.
+
+    Returns:
+        bool: True if inputs are valid, False otherwise.
+    """
     if country not in ALL_INDICATORS:
         logger.error("country not found in metadata: %s", country)
         return False
@@ -80,11 +89,17 @@ def valid_input(
 
 
 def build_args() -> argparse.ArgumentParser:
+    """
+    Build and configure the argument parser for the pipeline.
+
+    Returns:
+        argparse.ArgumentParser: The configured argument parser.
+    """
     parse = argparse.ArgumentParser(
         description="Economic Data Pipeline CLI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    # logging level
+    # Logging level
     log_group = parse.add_argument_group("Logging Option")
     log_group.add_argument(
         "-l",
@@ -93,7 +108,7 @@ def build_args() -> argparse.ArgumentParser:
         default="info",
         help="set logging level to monitoring (default: INFO)",
     )
-    # pipeline runner mode
+    # Pipeline runner mode
     run_mode = parse.add_mutually_exclusive_group(required=False)
     run_mode.add_argument(
         "--list", action="store_true", help="list of available indicators"
@@ -146,13 +161,21 @@ def build_args() -> argparse.ArgumentParser:
 
 
 def valid_args() -> argparse.Namespace | None:
+    """
+    Validate and parse command-line arguments.
+
+    Returns:
+        argparse.Namespace: The parsed arguments or None if the list of indicators is requested.
+    """
     parser = build_args()
     args = parser.parse_args()
+
     # List of Indicators Availabel on Config Data
     if args.list:
         print("List Available Indicators:")
         list_of_indicators()
         return None
+
     # single mode Validation
     if args.name:
         if args.source is not None:
@@ -211,14 +234,19 @@ def valid_args() -> argparse.Namespace | None:
 
 
 async def main():
-    """Main Execute command line pipeline"""
+    """
+    Main entry point for the pipeline execution.
+
+    This function orchestrates the entire pipeline process, including configuration,
+    argument parsing, database connection setup, and data processing stages.
+    """
     args = valid_args()
 
     # if list indicator called
     if args is None:
         return None
 
-    # setup logging
+    # Setup logging
     try:
         if args.log_level:
             target_level: int = resolve_log_level(args.log_level)

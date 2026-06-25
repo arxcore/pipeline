@@ -68,6 +68,11 @@ class BEAProvider:
         if not self.api_key:
             raise exc.ResourceNotFound(f"{meta.source} apikey not found")
 
+        if not meta.start_year:
+            raise ValueError(
+                "start year not found for %s, table %s", meta.dataset, meta.table
+            )
+
         # build Start year and end year
         start_range = list(range(meta.start_year, datetime.now().year + 1))
         start_to_end = ",".join(str(y) for y in start_range)

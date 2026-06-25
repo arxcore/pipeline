@@ -6,6 +6,7 @@ CPI_YoY:
   calc: "yoy"
   start_year: 2024
   start_month: 3
+  unit: "%"
   description: "CPI Annual Rate - All Items 2015=100"
 
 CoreCPI_YoY:
@@ -16,6 +17,7 @@ CoreCPI_YoY:
   calc: "yoy"
   start_year: 2024
   start_month: 3
+  unit: "%"
   description: "CPI 12mth - Excluding Energy & Unprocessed Food 2015=100"
 
 CPI_MoM:
@@ -26,6 +28,7 @@ CPI_MoM:
   calc: "mom"
   start_year: 2024
   start_month: 3
+  unit: "%"
   description: "CPI Monthly Rate - All Items 2015=100"
 
 CoreCPI_MoM:
@@ -36,6 +39,7 @@ CoreCPI_MoM:
   calc: "mom"
   start_year: 2024
   start_month: 3
+  unit: "Index, base year = 100"
   description: "CPI Index - Excluding Energy & Unprocessed Food 2015=100"
 
 PPI_Input_YoY:

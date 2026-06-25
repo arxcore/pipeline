@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from core.process.staging import staging_result
 import logging
 from core.models.pipeline_schemas import ApiResult, FileResult
+from core.parsers.ons.tasks import route_task
 
 if TYPE_CHECKING:
     from .manager import FlowsManager
@@ -18,7 +19,7 @@ async def parsing_all_db(
     indicator: str,
     persist_stg: bool,
 ):
-    """Parsing all data from database"""
+
     data = await manager.fetch_db.fetch_from_database(country, indicator, sources)
 
     if data is None:
@@ -28,10 +29,29 @@ async def parsing_all_db(
     file_data: list[FileResult] | None
     api_data: list[ApiResult] | None
     file_data, api_data = data
+    if file_data:
+        parser = route_task(file_data)
+        if persist_stg:
+            for item in file_data:
+                stg = staging_result(
+                    item.indicator,
+                    item.category,
+                    item.country,
+                    parser,
+                    item.source,
+                    item.code_name,
+                    item.calc,
+                    item.unit,
+                    item.description,
+                    item.freq,
+                )
+                await manager.load_stg.create_stg_table()
+                await manager.load_stg.load_stg_indicator(stg)
+
     if api_data:
         for item in api_data:
             parser = manager.parse.parse_data(item, item.meta.source, item.meta.freq)
-            if export_json:
+            if export_json and parser is not None:
                 await manager.export_json(
                     parser.model_dump(mode="json"), item.meta.indicator
                 )

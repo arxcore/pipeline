@@ -51,7 +51,7 @@ class LoadStg:
                             category TEXT NOT NULL,
                             frequency TEXT NOT NULL,
                             method TEXT NOT NULL,
-                            unit TEXT NOT NULL,
+                            unit TEXT,
                             footnotes_note JSONB,
                             description TEXT NOT NULL,
                             processed TIMESTAMPTZ,
@@ -114,7 +114,7 @@ class LoadStg:
                                     """,
                             rows,
                         )
-                        logger.info("Data loaded successfully.", len(rows))
+                        logger.info("Data %s loaded successfully.", len(rows))
 
         except psycopg_pool.PoolTimeout as e:
             logger.error("Connection pool timeout while trying to load data.", e)

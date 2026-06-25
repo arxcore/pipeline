@@ -145,7 +145,7 @@ class FetchDB:
 
             query = f"""
                 SELECT DISTINCT ON (
-                file_path, code_name, country, category, source, indicator, file_ext
+                file_path, code_name, country, category, source, indicator, file_ext, frequency, calc, unit, description
                 )
                 file_path, 
                 code_name, 
@@ -153,7 +153,11 @@ class FetchDB:
                 category, 
                 source, 
                 indicator, 
-                file_ext
+                file_ext,
+                frequency,
+                calc,
+                unit,
+                description
                 from file_registry
                 {where}
                 ORDER BY
@@ -164,6 +168,10 @@ class FetchDB:
                 source, 
                 indicator, 
                 file_ext, 
+                frequency,
+                calc,
+                unit,
+                description,
                 load_at DESC;
                 """
             async with self.pool.connection() as acon:
@@ -177,11 +185,16 @@ class FetchDB:
                                 data.append(
                                     FileResult(
                                         file_path=Path(x["file_path"]),
+                                        file_ext=x["file_ext"],
                                         country=x["country"],
                                         category=x["category"],
                                         indicator=x["indicator"],
+                                        freq=x["frequency"],
                                         source=x["source"],
                                         code_name=x["code_name"],
+                                        calc=x["calc"],
+                                        unit=x["unit"],
+                                        description=x["description"],
                                     )
                                 )
                             return data

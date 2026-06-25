@@ -1,0 +1,83 @@
+Unemployment:
+  url: "https://www.ons.gov.uk/generator?format=csv&uri=/employmentandlabourmarket/peoplenotinwork/unemployment/timeseries/mgsx/lms"
+  code_name: "MGSX"
+  source: ons
+  freq: "monthly"
+  calc: raw
+  unit: "%"
+  start_year: 2024
+  start_month: 3
+  description: "Unemployment Rate (Aged 16+, Seasonally Adjusted) - %"
+
+AvgEarnExcldBonus:
+  url: "https://www.ons.gov.uk/file?uri=/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/averageweeklyearningsearn01/current/earn01jun2025.xls"
+  code_name: "KAI9"
+  source: ons
+  freq: "monthly"
+  calc: qoq
+  start_year: 2023
+  start_month: 3
+  description: "Average Earnings Excluding Bonus 3 Month Average | Whole Economic - DATASET: EARN01"
+
+Wage_Growth_YoY:
+  url: "https://www.ons.gov.uk/file?uri=/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/averageweeklyearningsearn01/current/earn01jun2025.xls"
+  code_name: "KAC6"
+  source: ons
+  freq: "monthly"
+  calc: yoy
+  start_year: 2024
+  start_month: 3
+  description: "Wage Growth YoY - DATASET: EARN01"
+
+Claim_Count_Change:
+  url: "https://www.ons.gov.uk/generator?format=csv&uri=/employmentandlabourmarket/peoplenotinwork/outofworkbenefits/timeseries/bcjd/unem"
+  code_name: "BCJD"
+  source: ons
+  freq: "monthly"
+  #calc: percent
+  calc: net
+  start_year: 2024
+  start_month: 3
+  description: "Claimant Count Change - People SA (Thousands)"
+
+Job_Vacancies:
+  url: "https://www.ons.gov.uk/generator?format=csv&uri=/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/timeseries/jp9z/lms"
+  code_name: "JP9Z"
+  source: ons
+  freq: "monthly"
+  calc: raw
+  start_year: 2024
+  start_month: 3
+  description: "Job Vacancies - Total Services (Thousands)"
+
+Labour_Productivity_QoQ:
+  url: "https://www.ons.gov.uk/generator?format=csv&uri=/employmentandlabourmarket/peopleinwork/labourproductivity/timeseries/txbb/prdy"
+  code_name: "TXBB"
+  source: ons
+  freq: "quarterly"
+  calc: qoq
+  unit: "%"
+  start_year: 2020
+  start_month: 1
+  description: "Output per Hour Worked - % Change QoQ SA"
+
+Labour_Productivity_IDX:
+  url: "https://www.ons.gov.uk/generator?format=csv&uri=/employmentandlabourmarket/peopleinwork/labourproductivity/timeseries/lzvb/prdy"
+  code_name: "LZVB"
+  source: ons
+  freq: "quarterly"
+  calc: raw
+  unit: "Index, base year = 100"
+  start_year: 2020
+  start_month: 1
+  description: "Output per Hour Worked - Index 2022=100 SA"
+
+RealEarnExcldBonus_YoY:
+  url: "https://www.ons.gov.uk/file?uri=/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/averageweeklyearningsearn01/current/earn01jun2025.xls"
+  code_name: "A2F9"
+  source: ons
+  freq: "monthly"
+  calc: "yoy"
+  start_year: 2024
+  start_month: 3
+  description: "Real Earnings Excluding Bonus YoY - DATASET: EARN01"
