@@ -145,7 +145,7 @@ class FetchDB:
 
             query = f"""
                 SELECT DISTINCT ON (
-                file_path, code_name, country, category, source, indicator, file_ext, frequency, calc, unit, description
+                file_path, code_name, country, category, source, indicator, file_ext, frequency, calc, unit, sheet_name, description
                 )
                 file_path, 
                 code_name, 
@@ -157,6 +157,7 @@ class FetchDB:
                 frequency,
                 calc,
                 unit,
+                sheet_name,
                 description
                 from file_registry
                 {where}
@@ -171,6 +172,7 @@ class FetchDB:
                 frequency,
                 calc,
                 unit,
+                sheet_name,
                 description,
                 load_at DESC;
                 """
@@ -194,6 +196,7 @@ class FetchDB:
                                         code_name=x["code_name"],
                                         calc=x["calc"],
                                         unit=x["unit"],
+                                        sheet_name=x["sheet_name"],
                                         description=x["description"],
                                     )
                                 )

@@ -1,0 +1,34 @@
+Retail_SalesValue_MoM:
+  url: "https://www.ons.gov.uk/file?uri=/businessindustryandtrade/retailindustry/datasets/retailsalesindexreferencetables/current/mainreferencetables.xlsx"
+  code_name: "J5BT"
+  sheet_name: "CPSA3"
+  source: ons
+  freq: "monthly"
+  calc: "mom"
+  unit: "%"
+  start_year: 2024
+  start_month: 3
+  description: "Retail Sales Value MoM Change"
+
+Retail_SalesVolume_MoM:
+  url: "https://www.ons.gov.uk/file?uri=/businessindustryandtrade/retailindustry/datasets/retailsalesindexreferencetables/current/mainreferencetables.xlsx"
+  code_name: "J5EC"
+  sheet_name: "KPSA3"
+  source: ons
+  freq: "monthly"
+  calc: "mom"
+  unit: "%"
+  start_year: 2024
+  start_month: 3
+  description: "Retail Sales Volume MoM Change"
+
+Consumer_Spending:
+  url: "https://www.ons.gov.uk/generator?format=csv&uri=/economy/nationalaccounts/satelliteaccounts/timeseries/abjr/ukea"
+  code_name: "ABJR"
+  source: ons
+  freq: "quarterly"
+  calc: raw
+  unit: "£m"
+  start_year: 2020
+  start_month: 1
+  description: "Household Final Consumption Expenditure - National Concept CVM SA (£m)"

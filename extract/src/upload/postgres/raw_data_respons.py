@@ -111,6 +111,7 @@ class LoadRaw:
                                     code_name TEXT NOT NULL,
                                     calc TEXT NOT NULL,
                                     unit TEXT,
+                                    sheet_name TEXT,
                                     description TEXT NOT NULL,
                                     load_at TIMESTAMPTZ DEFAULT NOW(),
                                     UNIQUE (file_path, country, category, indicator)
@@ -144,17 +145,23 @@ class LoadRaw:
                                 item.code_name,
                                 item.calc,
                                 item.unit,
+                                item.sheet_name,
                                 item.description,
                             )
                             for item in data
                         ]
 
-                        logger.info("Loading %s rows to databse..", len(rows))
+                        logger.info(
+                            "Load SheetName %s to file_registry",
+                            [item.sheet_name for item in data if item.sheet_name],
+                        )
+
+                        logger.info("Loading %s indicators to databse..", len(rows))
                         await acur.executemany(
                             """
                             INSERT INTO file_registry
-                                (file_path, file_ext, country, category, indicator, frequency, source, code_name, calc, unit, description)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                (file_path, file_ext, country, category, indicator, frequency, source, code_name, calc, unit, sheet_name, description)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             ON CONFLICT (file_path, country, category, indicator)
                             DO NOTHING
                             """,

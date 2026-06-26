@@ -15,6 +15,7 @@ class StagingItems(BaseModel):
     value: Decimal
     frequency: str
     method: str
+    sheet_name: str | None
     unit: str | None
     footnotes_note: list[Any] | None = None
     processed: datetime

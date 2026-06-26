@@ -86,6 +86,7 @@ class RawProcessors:
                     freq=meta.freq,
                     calc=meta.calc,
                     unit=meta.unit,
+                    sheet_name=meta.sheet_name,
                     description=meta.description,
                 )
 

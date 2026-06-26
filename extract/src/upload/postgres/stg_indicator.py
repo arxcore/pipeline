@@ -51,6 +51,7 @@ class LoadStg:
                             category TEXT NOT NULL,
                             frequency TEXT NOT NULL,
                             method TEXT NOT NULL,
+                            sheet_name TEXT,
                             unit TEXT,
                             footnotes_note JSONB,
                             description TEXT NOT NULL,
@@ -85,6 +86,7 @@ class LoadStg:
                                 item.category,
                                 item.frequency,
                                 item.method,
+                                item.sheet_name,
                                 item.unit,
                                 Json(notes)
                                 if (
@@ -104,8 +106,8 @@ class LoadStg:
                         await acur.executemany(
                             """
                                     INSERT INTO staging_indicators (
-                                        date, year, source, code, indicator, value, country, category, frequency, method, unit, footnotes_note, description, processed
-                                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                        date, year, source, code, indicator, value, country, category, frequency, method, sheet_name, unit, footnotes_note, description, processed
+                                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                                     ON CONFLICT (date, source, code, country, frequency)
                                     DO UPDATE SET 
                                         value = EXCLUDED.value,

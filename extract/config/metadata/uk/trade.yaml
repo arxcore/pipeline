@@ -1,0 +1,89 @@
+CurrentAccountToGDP_QoQ:
+  url: "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx"
+  code_name: "AA6H"
+  source: ons
+  freq: "quarterly"
+  calc: "qoq"
+  start_year: 2020
+  start_month: 1
+  description: "BoP: Current Account Balance as % of GDP"
+
+ServiceBalance:
+  url: "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx"
+  code_name: "KTMS"
+  source: ons
+  freq: "quarterly"
+  calc: raw
+  start_year: 2020
+  start_month: 1
+  description: "BoP: Total Trade in Services - Balance (£M, CP, NSA)"
+
+Goods_ServicesBalance:
+  url: "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx"
+  code_name: "KTMY"
+  source: ons
+  freq: "quarterly"
+  calc: raw
+  start_year: 2020
+  start_month: 1
+  description: "BoP: Total Trade in Goods & Services - Balance (£M, CP, NSA)"
+
+PrimaryIncomeBalance:
+  url: "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx"
+  code_name: "KTMP"
+  source: ons
+  freq: "quarterly"
+  calc: raw
+  start_year: 2020
+  start_month: 1
+  description: "BoP: Primary Income - Balance (£M, CP, NSA)"
+
+SecondaryIncomeBalance:
+  url: "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx"
+  code_name: "IKBP"
+  source: ons
+  freq: "quarterly"
+  calc: raw
+  start_year: 2020
+  start_month: 1
+  description: "BoP: Secondary Income (BPM6) - Total Balance (£M, CP, SA)"
+
+CurrentAccountBalance:
+  url: "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx"
+  code_name: "HBOP"
+  source: ons
+  freq: "quarterly"
+  calc: raw
+  start_year: 2020
+  start_month: 1
+  description: "BoP: Current Account Balance SA (£M)"
+
+NetCapitalFlow:
+  url: "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx"
+  code_name: "HBNT"
+  source: ons
+  freq: "quarterly"
+  calc: raw
+  start_year: 2020
+  start_month: 1
+  description: "BoP: Financial Account - Total Net Flows NSA (£M)"
+
+FA_FI_EquityInvest:
+  url: "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx"
+  code_name: "XBLW"
+  source: ons
+  freq: "quarterly"
+  calc: raw
+  start_year: 2020
+  start_month: 1
+  description: "BoP: FA: PI: Liability Flows - Equity & Investment Fund Shares NSA (£M)"
+
+FDI_Total_YoY:
+  url: "https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/balanceofpayments/current/pnbp.xlsx"
+  code_name: "HBUY"
+  source: ons
+  freq: "quarterly"
+  calc: "yoy"
+  start_year: 2020
+  start_month: 1
+  description: "FDI Inward - Total FDI: Equity Capital & Reinvested Earnings NSA (£M)"

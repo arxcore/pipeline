@@ -1,0 +1,19 @@
+IndustrialProduction_YoY:
+  url: "https://www.ons.gov.uk/file?uri=/economy/economicoutputandproductivity/output/datasets/indexofproduction/current/diop.xlsx"
+  code_name: "K27Q"
+  source: ons
+  freq: "monthly"
+  calc: "yoy"
+  start_year: 2023
+  start_month: 3
+  description: "Industrial Production YoY Change - DATASET: DIOP"
+
+IndustrialProduction_MoM:
+  url: "https://www.ons.gov.uk/file?uri=/economy/economicoutputandproductivity/output/datasets/indexofproduction/current/diop.xlsx"
+  code_name: "K27Q"
+  source: ons
+  freq: "monthly"
+  calc: "mom"
+  start_year: 2024
+  start_month: 3
+  description: "Industrial Production MoM Change - DATASET: DIOP"
