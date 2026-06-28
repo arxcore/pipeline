@@ -27,7 +27,7 @@ Wage_Growth_YoY:
   code_name: "KAC6"
   source: ons
   freq: "monthly"
-  calc: yoy
+  calc: raw
   unit: "%"
   start_year: 2024
   start_month: 3
@@ -59,7 +59,7 @@ Labour_Productivity_QoQ:
   code_name: "TXBB"
   source: ons
   freq: "quarterly"
-  calc: qoq
+  calc: raw
   unit: "%"
   start_year: 2020
   start_month: 1
@@ -82,7 +82,7 @@ RealEarnExcldBonus_YoY:
   code_name: "A2F9"
   source: ons
   freq: "monthly"
-  calc: "yoy"
+  calc: raw
   unit: "%"
   start_year: 2024
   start_month: 3

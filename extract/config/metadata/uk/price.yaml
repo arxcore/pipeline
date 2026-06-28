@@ -3,7 +3,7 @@ CPI_YoY:
   code_name: "D7G7"
   source: ons
   freq: "monthly"
-  calc: "yoy"
+  calc: raw
   start_year: 2024
   start_month: 3
   unit: "%"
@@ -14,7 +14,7 @@ CoreCPI_YoY:
   code_name: "DKO9"
   source: ons
   freq: "monthly"
-  calc: "yoy"
+  calc: raw
   start_year: 2024
   start_month: 3
   unit: "%"
@@ -25,7 +25,7 @@ CPI_MoM:
   code_name: "D7OE"
   source: ons
   freq: "monthly"
-  calc: "mom"
+  calc: raw
   start_year: 2024
   start_month: 3
   unit: "%"

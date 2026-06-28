@@ -74,7 +74,11 @@ async def fetch_config_indicators(manager: FlowsManager, filter: PipelineFilter)
         for i, result in enumerate(results):
             tasks_info = tasks_names[i]
             if isinstance(result, BaseException):
-                logger.error("Error task, skiping indicator %s", result, exc_info=True)
+                logger.error(
+                    "Error task, skiping %s indicator..",
+                    tasks_info["name"],
+                    exc_info=True,
+                )
                 error_count += 1
                 continue
             if isinstance(result, FileResult):
@@ -85,7 +89,7 @@ async def fetch_config_indicators(manager: FlowsManager, filter: PipelineFilter)
 
             if result is None:
                 logger.warning(
-                    "No data processed from %s, indicator %s, skipping...",
+                    "No data processed from %s, indicator %s, skipping..",
                     tasks_info["source"],
                     tasks_info["name"],
                 )
@@ -112,8 +116,8 @@ async def fetch_config_indicators(manager: FlowsManager, filter: PipelineFilter)
             return valid_path
 
         return valid_data
-    except exc.PipelineCrash:
-        logger.exception("Pipeline process carsh during operation")
+    except exc.PipelineCrash as e:
+        logger.exception("Pipeline process carsh during operation %s", e)
         raise
 
 
@@ -216,7 +220,7 @@ async def load_raw_result(manager: FlowsManager, data: Fetchresult):
 
         # api_data
         logger.info("loading apis data %s", type(data[0]))
-        await manager.load_raw.load_raw_respons([i.source_data for i in api_data])
+        await manager.load_raw.load_raw_respons([i.model_dump() for i in api_data])
 
     elif is_file_result(data):
         logger.info("is_file_result %s", type(data[0]))
@@ -225,4 +229,4 @@ async def load_raw_result(manager: FlowsManager, data: Fetchresult):
     else:
         logger.info("loading apis data %s", type(data[0]))
         api_data = cast(list[ApiResult], data)
-        await manager.load_raw.load_raw_respons([i.source_data for i in api_data])
+        await manager.load_raw.load_raw_respons([i.model_dump() for i in api_data])

@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import datetime
 import hashlib
 from src.providers.ons.model import ONSConfigModel
+import monitoring.exc_models as exc
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,7 @@ class ONSProvider:
         file = DOWNLOADS_PATH / name
 
         if file.exists():
-            logger.info("File already exists %s, skiping downloads", file.name)
+            logger.info("File already exists %s, skiping downloads -_", file.name)
             return file
 
         if not self.session:
@@ -73,6 +74,11 @@ class ONSProvider:
                 meta.url, timeout=aiohttp.ClientTimeout(total=30)
             ) as r:
                 r.raise_for_status()
+                if "text/html" in r.headers.get("Content-Type", ""):
+                    raise exc.FetchDataError(
+                        "Expected file, got HTML from ONS for %s ", meta.code_name
+                    )
+
                 with open(file, "wb") as f:
                     async for chunk in r.content.iter_chunked(8192 * 10):
                         f.write(chunk)
@@ -97,4 +103,9 @@ class ONSProvider:
             if file.exists():
                 file.unlink()
 
+            raise
+        except exc.FetchDataError as e:
+            logger.error("Failied downloads file %s: %s", meta.code_name, str(e))
+            if file.exists():
+                file.unlink()
             raise

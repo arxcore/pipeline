@@ -3,7 +3,8 @@ IndustrialProduction_YoY:
   code_name: "K27Q"
   source: ons
   freq: "monthly"
-  calc: "yoy"
+  calc: yoy
+  unit: "%"
   start_year: 2023
   start_month: 3
   description: "Industrial Production YoY Change - DATASET: DIOP"
@@ -13,7 +14,8 @@ IndustrialProduction_MoM:
   code_name: "K27Q"
   source: ons
   freq: "monthly"
-  calc: "mom"
+  calc: raw
+  unit: "%"
   start_year: 2024
   start_month: 3
   description: "Industrial Production MoM Change - DATASET: DIOP"

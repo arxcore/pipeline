@@ -1,9 +1,7 @@
-from datetime import datetime
 from decimal import Decimal
 import logging
 import re
 from typing import Any
-from pandas import cut
 import polars as pl
 from core.models.parsing_schemas import ParsedItems
 from core.models.pipeline_schemas import FileResult
@@ -73,8 +71,10 @@ def _find_codename_infile(file: pl.DataFrame, meta: FileResult):
 
 def _slice_first_section(df: pl.DataFrame, date_type: str):
     pattern = {
-        "%Y-%m-%d %H:%M:%S": r"^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$",
-        "%Y %b": r"^\d{4}\s+[A-Za-z]{3}$",
+        "datetime": r"^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$",
+        "monthly": r"^\d{4}\s+[A-Za-z]{3}$",
+        "quarterly": r"^\d{4}\s+Q\d$",
+        "annual": r"^\d{4}$",
     }
     x = pattern[date_type]
     logger.info("Searching for date_type: %s", date_type)
@@ -85,7 +85,7 @@ def _slice_first_section(df: pl.DataFrame, date_type: str):
         pl.DataFrame({"is_date": is_date})
         .with_row_index()
         .with_columns(pl.col("is_date").cast(pl.Int32).cum_sum().alias("date_seen"))
-        .filter((~pl.col("is_date")) & (pl.col("date_seen")) > 0)
+        .filter((~pl.col("is_date")) & (pl.col("date_seen") > 0))
     )
     if len(boundry) > 0:
         cut_at = boundry["index"][0]
@@ -95,16 +95,64 @@ def _slice_first_section(df: pl.DataFrame, date_type: str):
     return df
 
 
-def _type_date(df: pl.DataFrame):
-    date_col = df.columns[0]
-    logger.info("Sample format date %s", df[date_col].head(5))
-    if df[date_col].str.contains(r"^\d{4}\s+[A-Za-z]{3}$").any():
-        return "%Y %b"
-    elif df[date_col].str.contains(r"^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$").any():
-        return "%Y-%m-%d %H:%M:%S"
+def _date_parse_expres(date_type: str) -> pl.Expr:
+    if date_type == "monthly":
+        # 2xxx JAN, Jan-> jan
+        lowered = pl.nth(0).cast(pl.Utf8).str.to_lowercase()
 
+        # "2xxx "
+        year_part = lowered.str.extract(r"^(\d{4} )", 0)
+
+        # 2xxx Jan/JAN -> Jan
+        month_part = lowered.str.extract(r"(\w{3})$", 1)
+
+        # Jan JAN -> Jan
+        month_title = month_part.str.slice(
+            0, 1
+        ).str.to_uppercase() + month_part.str.slice(1)
+
+        return (
+            (year_part + month_title)
+            .str.strptime(dtype=pl.Datetime, format="%Y %b", strict=False)
+            .dt.strftime("%Y-%m-%d")
+        )
+
+    elif date_type == "quarterly":
+        raw = pl.nth(0).cast(pl.Utf8)
+        year_part = raw.str.extract(r"^(\d{4})", 1)
+        q_num = raw.str.extract(r"Q(\d)$", 1).cast(pl.Int32)
+        month_num = ((q_num - 1) * 3 + 1).cast(pl.Utf8).str.zfill(2)
+        return (
+            (year_part + pl.lit("-") + month_num + pl.lit("-01"))
+            .str.strptime(dtype=pl.Datetime, format="%Y-%m-%d", strict=False)
+            .dt.strftime("%Y-%m-%d")
+        )
+    elif date_type == "annual":
+        return (
+            pl.nth(0)
+            .cast(pl.Utf8)
+            .str.strptime(dtype=pl.Datetime, format="%Y", strict=False)
+            .dt.strftime("%Y-%m-%d")
+        )
+
+    elif date_type == "datetime":
+        return (
+            pl.nth(0)
+            .cast(pl.Utf8)
+            .str.strptime(dtype=pl.Datetime, format="%Y-%m-%d %H:%M:%S", strict=False)
+            .dt.strftime("%Y-%m-%d")
+        )
     else:
-        raise ValueError("date_type not found")
+        raise ValueError("Unknown Date Type %s", date_type)
+
+
+def _detect_type_date(df: pl.DataFrame):
+    """detect how the date is stored in files, not frequency"""
+    date_col = df[df.columns[0]].cast(pl.Utf8)
+    logger.info("Sample format date %s", date_col.head(20).to_list())
+    if date_col.str.contains(r"^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$").any():
+        return "datetime"
+    return "native"
 
 
 def parser_excl(meta: FileResult):
@@ -144,18 +192,15 @@ def parser_excl(meta: FileResult):
         df_data = excel.slice(offset=row + 1)
         logger.info("row start at row %s", row + 1)
 
-        type_dt = _type_date(df_data)
+        storage = _detect_type_date(df_data)
+        parse_type = "datetime" if storage == "datetime" else meta.freq
         # skip second section in midle file
-        skip_seccd_sess = _slice_first_section(df_data, type_dt)
+        skip_sess = _slice_first_section(df_data, parse_type)
 
         # Create an alias table with the date and value columns
-        df_result = skip_seccd_sess.select(
+        df_result = skip_sess.select(
             [
-                pl.nth(0)
-                .cast(pl.Utf8)
-                .str.strptime(dtype=pl.Datetime, format=type_dt, strict=False)
-                .dt.strftime("%Y-%m-%d")
-                .alias("date"),
+                _date_parse_expres(parse_type).alias("date"),
                 pl.nth(colums).alias("value"),
             ]
         )
@@ -164,6 +209,7 @@ def parser_excl(meta: FileResult):
         df_filter = df_result.filter(
             pl.col("date").is_not_null(),
             pl.col("value").is_not_null(),
+            pl.col("value") != "",
         )
         logger.info("Final Filtered excel data %s", pl.DataFrame(df_filter))
         # Convert the data to a list of ParsedItems objects

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from providers import BaseMetaModel
 
 
@@ -16,8 +16,12 @@ class BEAConfigModel(BaseMetaModel):
 
 
 class BEAField(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    SeriesCode: str | None = None
     TimePeriod: str
     DataValue: str
+    NoteRef: str | None = None
 
 
 class BEANotes(BaseModel):

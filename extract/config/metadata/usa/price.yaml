@@ -60,6 +60,7 @@ PPI_MoM:
 
 Core_PCE_MoM:
   source: bea
+  code_name: "DPCERGM"
   dataset: "NIPA"
   table: "T20807"
   freq: M

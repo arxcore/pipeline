@@ -40,7 +40,7 @@ def route_task(metafile: list[FileResult]):
                 raise NotImplementedError(f"Unhandel {x.file_ext} file")
         except Exception as e:
             logger.error("Unexpected error %s", e)
-            errors.append({"file_name": metafile[0].file_path.suffix, "eror": str(e)})
+            errors.append({"file_name": metafile[0].file_path.name, "eror": str(e)})
 
     logger.info("succesfuly process %s record, %s errors", len(results), len(errors))
     logger.debug("succesfuly process %s record, %s errors", results, errors)

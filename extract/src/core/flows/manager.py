@@ -5,7 +5,7 @@ from ._fetch import (
     orchest_all_fetch,
 )
 from ._parser import parsing_all_db
-from ._chain import run_all_chain, run_single_all_chain
+from ._chain import run_all_chain
 from ._utils import PipelineFilter
 from upload.postgres import LoadRaw, LoadStg, FetchDB
 from core.process.parse import ParseProcessors
@@ -144,9 +144,6 @@ class FlowsManager:
         self, export_json: bool, source: list[str], country: str, indicator: str
     ):
         return await run_all_chain(self, export_json, source, country, indicator)
-
-    async def run_single_all_chain(self, country: str, name: str, export_json: bool):
-        return await run_single_all_chain(self, country, name, export_json)
 
     async def orchest_all_fetch(
         self,

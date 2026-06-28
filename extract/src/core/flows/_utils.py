@@ -16,7 +16,7 @@ async def aplay_filters(
 ) -> AllIndicatorsModel:
     result: dict[str, Any] = {}
     for country, categories in all_indicator.items():
-        if filter.country and country.lower() != filter.country.lower():
+        if filter.country and country.lower() != filter.country:
             continue
         filtered_categori: dict[str, Any] = {}
         for category, indicators in categories.items():

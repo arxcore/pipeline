@@ -30,9 +30,9 @@ async def parsing_all_db(
     api_data: list[ApiResult] | None
     file_data, api_data = data
     if file_data:
-        parser = route_task(file_data)
         if persist_stg:
             for item in file_data:
+                parser = route_task([item])
                 stg = staging_result(
                     item.indicator,
                     item.category,
@@ -41,6 +41,7 @@ async def parsing_all_db(
                     item.source,
                     item.code_name,
                     item.calc,
+                    item.sheet_name,
                     item.unit,
                     item.description,
                     item.freq,
@@ -51,7 +52,7 @@ async def parsing_all_db(
     if api_data:
         for item in api_data:
             parser = manager.parse.parse_data(item, item.meta.source, item.meta.freq)
-            if export_json and parser is not None:
+            if export_json:
                 await manager.export_json(
                     parser.model_dump(mode="json"), item.meta.indicator
                 )
@@ -64,6 +65,7 @@ async def parsing_all_db(
                     item.meta.source,
                     item.meta.code_name,
                     item.meta.calc,
+                    item.meta.sheet_name,
                     item.meta.unit,
                     item.meta.description,
                     item.meta.freq,

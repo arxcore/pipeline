@@ -3,7 +3,7 @@ CurrentAccountToGDP_QoQ:
   code_name: "AA6H"
   source: ons
   freq: "quarterly"
-  calc: "qoq"
+  calc: raw
   start_year: 2020
   start_month: 1
   description: "BoP: Current Account Balance as % of GDP"

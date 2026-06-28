@@ -4,7 +4,7 @@ Retail_SalesValue_MoM:
   sheet_name: "CPSA3"
   source: ons
   freq: "monthly"
-  calc: "mom"
+  calc: raw
   unit: "%"
   start_year: 2024
   start_month: 3
@@ -16,7 +16,7 @@ Retail_SalesVolume_MoM:
   sheet_name: "KPSA3"
   source: ons
   freq: "monthly"
-  calc: "mom"
+  calc: raw
   unit: "%"
   start_year: 2024
   start_month: 3

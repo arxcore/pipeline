@@ -30,30 +30,6 @@ class FetchDB:
     ):
         await self.pool.__aexit__(exc_type, exc_val, exc_tb)
 
-    async def fetch_database(self, name: str, country: str) -> dict[str, Any] | None:
-        query = """
-        select payload 
-        from raw_respons_indic 
-        where payload -> 'meta' ->> 'indicator' = %s and 
-        payload -> 'meta' ->> 'country' = %s
-        order by load_at desc
-        limit 1
-        """
-        async with self.pool.connection() as acon:
-            async with acon:
-                async with acon.cursor() as curr:
-                    await curr.execute(query, (name, country))
-                    record = await curr.fetchone()
-                    if record:
-                        return record[0]
-
-                    logger.warning(
-                        "No raw data found in database for %s, country %s",
-                        name,
-                        country,
-                    )
-                    return None
-
     async def db_raw_respons_api(
         self, country: str, indicator: str, sources: list[str]
     ) -> list[ApiResult] | None:
