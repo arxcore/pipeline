@@ -46,7 +46,6 @@ async def parsing_all_db(
                     item.description,
                     item.freq,
                 )
-                await manager.load_stg.create_stg_table()
                 await manager.load_stg.load_stg_indicator(stg)
 
     if api_data:
@@ -71,5 +70,4 @@ async def parsing_all_db(
                     item.meta.freq,
                 )
 
-                await manager.load_stg.create_stg_table()
                 await manager.load_stg.load_stg_indicator(stg)

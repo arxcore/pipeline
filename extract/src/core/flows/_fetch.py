@@ -164,6 +164,11 @@ async def orchest_all_fetch(
             if persist_raw and data is not None:
                 logger.debug("type data %s", type(data))
                 await manager.load_raw_result(data)
+            if export_json:
+                if isinstance(data, tuple):
+                    _, api_data = data
+                    for items in api_data:
+                        await manager.export_json(items)
 
         except Exception as e:
             logger.error("Unexpected Error %s", e)
@@ -215,11 +220,11 @@ async def load_raw_result(manager: FlowsManager, data: Fetchresult):
     if isinstance(data, tuple):
         file_data, api_data = data
         # file_path
-        logger.info("is_file_result %s", type(data[0]))
+        logger.info("is_file_result %s", type(file_data[0]))
         await manager.load_raw.load_path(file_data)
 
         # api_data
-        logger.info("loading apis data %s", type(data[0]))
+        logger.info("loading apis data %s", type(api_data[0]))
         await manager.load_raw.load_raw_respons([i.model_dump() for i in api_data])
 
     elif is_file_result(data):

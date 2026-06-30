@@ -50,7 +50,15 @@ class FetchDB:
                 conditional.append("payload -> 'meta' ->> 'source' = ANY(%s)")
                 params.append(sources)
 
-            where = f" WHERE {' AND '.join(conditional)}" if conditional else ""
+            # filter by load_at == CURRENT_DATE
+            conditional.append("load_at::DATE = CURRENT_DATE")
+
+            where = (
+                f" WHERE {' AND '.join(conditional)}"
+                if conditional
+                else "load_at::DATE = CURRENT_DATE"
+            )
+            logger.debug("Query Filters: %s", where)
 
             query = f"""
                 SELECT DISTINCT ON (
@@ -117,11 +125,19 @@ class FetchDB:
                 conditional.append("indicator = %s")
                 params.append(indicator)
 
-            where = f"WHERE {' AND '.join(conditional)}" if conditional else ""
+            # filter by load_at == CURRENT_DATE
+            conditional.append("load_at::DATE = CURRENT_DATE")
+
+            where = (
+                f"WHERE {' AND '.join(conditional)}"
+                if conditional
+                else "load_at::DATE = CURRENT_DATE"
+            )
+            logger.debug("Query Filters: %s", where)
 
             query = f"""
                 SELECT DISTINCT ON (
-                file_path, code_name, country, category, source, indicator, file_ext, frequency, calc, unit, sheet_name, description
+                indicator, code_name
                 )
                 file_path, 
                 code_name, 
@@ -134,22 +150,12 @@ class FetchDB:
                 calc,
                 unit,
                 sheet_name,
-                description
+                description,
+                load_at
                 from file_registry
                 {where}
                 ORDER BY
-                file_path, 
-                code_name, 
-                country, 
-                category, 
-                source, 
-                indicator, 
-                file_ext, 
-                frequency,
-                calc,
-                unit,
-                sheet_name,
-                description,
+                indicator, code_name,
                 load_at DESC;
                 """
             async with self.pool.connection() as acon:
