@@ -1,13 +1,34 @@
-import argparse
+from dataclasses import dataclass
 import logging
 from core.flows import FlowsManager
 from types import TracebackType
 from typing import Optional
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
 
-class PipelineCliParser:
+class Stage(Enum):
+    FETCH = "fetch"
+    PARSE = "parse"
+    ALL = "all"
+
+
+@dataclass
+class PipelineConfig:
+    """Pipeline Configuration"""
+
+    stage: Stage
+    source: list[str]
+    country: str | None = None
+    indicator_name: str | None = None
+    export_json: bool = False
+    replay: bool = False
+    persist_raw: bool = False
+    persist_stg: bool = False
+
+
+class PipelineRunner:
     def __init__(
         self,
         flows_manager: FlowsManager,
@@ -26,32 +47,31 @@ class PipelineCliParser:
     ):
         await self.flows.__aexit__(exc_type, exc_val, exc_tcb)
 
-    async def runner(self, args: argparse.Namespace):
+    async def runner(self, cfg: PipelineConfig):
         """Execute cli runner Pipeline"""
-        match args.stage:
-            case "fetch":
+        logger.info("Running Pipeline Stage: %s", cfg.stage)
+        match Stage(cfg.stage):
+            case Stage.FETCH:
                 await self.flows.orchest_all_fetch(
-                    persist_raw=args.persist_raw,
-                    replay=args.replay,
-                    export_json=args.export_json,
-                    source=args.source,
-                    country=args.country,
-                    indicator=args.name,
+                    source=cfg.source,
+                    persist_raw=cfg.persist_raw,
+                    replay=cfg.replay,
+                    export_json=cfg.export_json,
+                    country=cfg.country,
+                    indicator=cfg.indicator_name,
                 )
-            case "parse":
+            case Stage.PARSE:
                 await self.flows.parsing_all_db(
-                    export_json=args.export_json,
-                    source=args.source,
-                    country=args.country,
-                    indicator=args.name,
-                    persist_stg=args.persist_stg,
+                    source=cfg.source,
+                    export_json=cfg.export_json,
+                    country=cfg.country,
+                    indicator=cfg.indicator_name,
+                    persist_stg=cfg.persist_stg,
                 )
-            case "all":
+            case Stage.ALL:
                 await self.flows.run_all_chain(
-                    export_json=args.export_json,
-                    source=args.source,
-                    country=args.country,
-                    indicator=args.name,
+                    source=cfg.source,
+                    export_json=cfg.export_json,
+                    country=cfg.country,
+                    indicator=cfg.indicator_name,
                 )
-            case _:
-                assert False, f"unhandel stage {args.stage}"

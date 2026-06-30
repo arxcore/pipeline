@@ -13,14 +13,14 @@ logger = logging.getLogger(__name__)
 
 async def parsing_all_db(
     manager: FlowsManager,
-    export_json: bool,
     sources: list[str],
-    country: str,
-    indicator: str,
-    persist_stg: bool,
+    export_json: bool = False,
+    country: str | None = None,
+    indicator: str | None = None,
+    persist_stg: bool = False,
 ):
 
-    data = await manager.fetch_db.fetch_from_database(country, indicator, sources)
+    data = await manager.fetch_db.fetch_from_database(sources, country, indicator)
 
     if data is None:
         logger.warning("No data to parse for all indicators, skipping...")

@@ -10,10 +10,10 @@ logger = logging.getLogger(__name__)
 
 async def run_all_chain(
     manager: FlowsManager,
-    export_json: bool,
     source: list[str],
-    country: str,
-    indicator: str,
+    export_json: bool = False,
+    country: str | None = None,
+    indicator: str | None = None,
 ):
     """Running all indicator with all chain process, from fetch, loadraw, parse, staging"""
     # raw data from API
@@ -28,5 +28,5 @@ async def run_all_chain(
 
     # parse data from raw data
     await manager.parsing_all_db(
-        export_json, source, country, indicator, persist_stg=True
+        source, export_json, country, indicator, persist_stg=True
     )

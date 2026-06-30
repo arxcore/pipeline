@@ -140,18 +140,18 @@ async def run_all_chain(
 
     # parse data from raw data
     await manager.parsing_all_db(
-        export_json, source, country, indicator, persist_stg=True
+        source, export_json, country, indicator, persist_stg=True
     )
 
 
 async def orchest_all_fetch(
     manager: FlowsManager,
-    persist_raw: bool,
-    replay: bool,
-    export_json: bool,
     source: list[str],
-    country: str,
-    indicator: str,
+    persist_raw: bool = False,
+    replay: bool = False,
+    export_json: bool = False,
+    country: str | None = None,
+    indicator: str | None = None,
 ):
     """Running all process of indicators"""
     if source or country or indicator and country:
@@ -176,7 +176,7 @@ async def orchest_all_fetch(
         return data
     if replay:
         logger.info("Replaying data from database for all indicators...")
-        data = await manager.fetch_db.fetch_from_database(country, indicator, source)
+        data = await manager.fetch_db.fetch_from_database(source, country, indicator)
 
         if data is None:
             return None

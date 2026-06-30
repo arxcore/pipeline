@@ -65,6 +65,12 @@ class FlowsManager:
         await self.load_raw.__aexit__(exc_type, exc_val, exc_tb)
         await self.fetch_db.__aexit__(exc_type, exc_val, exc_tb)
 
+    async def prepare_scheme_table(self):
+        """Prepare scheme table"""
+        await self.load_stg.create_stg_table()
+        await self.load_raw.create_register_path_table()
+        await self.load_raw.create_raw_respons_table()
+
     async def export_json(
         self,
         data: list[ParsedItems]
@@ -130,32 +136,36 @@ class FlowsManager:
 
     async def parsing_all_db(
         self,
-        export_json: bool,
         source: list[str],
-        country: str,
-        indicator: str,
-        persist_stg: bool,
+        export_json: bool = False,
+        country: str | None = None,
+        indicator: str | None = None,
+        persist_stg: bool = False,
     ):
         return await parsing_all_db(
-            self, export_json, source, country, indicator, persist_stg
+            self, source, export_json, country, indicator, persist_stg
         )
 
     async def run_all_chain(
-        self, export_json: bool, source: list[str], country: str, indicator: str
+        self,
+        source: list[str],
+        export_json: bool = False,
+        country: str | None = None,
+        indicator: str | None = None,
     ):
-        return await run_all_chain(self, export_json, source, country, indicator)
+        return await run_all_chain(self, source, export_json, country, indicator)
 
     async def orchest_all_fetch(
         self,
-        persist_raw: bool,
-        replay: bool,
-        export_json: bool,
         source: list[str],
-        country: str,
-        indicator: str,
+        persist_raw: bool = False,
+        replay: bool = False,
+        export_json: bool = False,
+        country: str | None = None,
+        indicator: str | None = None,
     ):
         return await orchest_all_fetch(
-            self, persist_raw, replay, export_json, source, country, indicator
+            self, source, persist_raw, replay, export_json, country, indicator
         )
 
     async def load_raw_result(self, data: Fetchresult):

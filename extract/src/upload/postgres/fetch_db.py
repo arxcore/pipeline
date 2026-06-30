@@ -31,7 +31,10 @@ class FetchDB:
         await self.pool.__aexit__(exc_type, exc_val, exc_tb)
 
     async def db_raw_respons_api(
-        self, country: str, indicator: str, sources: list[str]
+        self,
+        sources: list[str],
+        country: str | None = None,
+        indicator: str | None = None,
     ) -> list[ApiResult] | None:
         """fetch raw respons api from database"""
         try:
@@ -108,7 +111,10 @@ class FetchDB:
             raise SystemExit(1)
 
     async def db_register_path(
-        self, country: str, indicator: str, sources: list[str]
+        self,
+        sources: list[str],
+        country: str | None = None,
+        indicator: str | None = None,
     ) -> list[FileResult] | None:
         """fetch register file_path from database"""
         try:
@@ -197,7 +203,10 @@ class FetchDB:
             raise SystemExit(1)
 
     async def fetch_from_database(
-        self, country: str, indicator: str, sources: list[str]
+        self,
+        sources: list[str],
+        country: str | None = None,
+        indicator: str | None = None,
     ) -> tuple[list[FileResult] | None, list[ApiResult] | None] | None:
         # NOTE:
         # 0 - reg_path
@@ -209,8 +218,8 @@ class FetchDB:
                 indicator,
                 sources,
             )
-            reg_path = await self.db_register_path(country, indicator, sources)
-            api = await self.db_raw_respons_api(country, indicator, sources)
+            reg_path = await self.db_register_path(sources, country, indicator)
+            api = await self.db_raw_respons_api(sources, country, indicator)
 
             # count
             reg_count = len(reg_path) if reg_path else 0

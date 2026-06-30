@@ -6,8 +6,8 @@ import logging
 import sys
 import traceback
 from config.settings import CONN_STR
-from typing import Optional
-from core.cli import PipelineCliParser
+from typing import Any, Optional
+from core.cli import PipelineRunner, PipelineConfig, Stage
 from config.metadata.load_yaml import load_all_indicator
 import argparse
 from core.process.parse import ParseProcessors
@@ -24,7 +24,7 @@ ALL_INDICATORS = load_all_indicator()
 
 def build_injection(
     pool: AsyncConnectionPool[AsyncConnection[TupleRow]],
-) -> PipelineCliParser:
+) -> PipelineRunner:
     """Build Dependency Injection for Pipeline"""
     stg_db = LoadStg(pool)
     raw_db = LoadRaw(pool)
@@ -32,7 +32,7 @@ def build_injection(
     fetch_db = FetchDB(pool)
     procc_parse = ParseProcessors()
     flows = FlowsManager(procc_raw, stg_db, raw_db, procc_parse, fetch_db)
-    return PipelineCliParser(flows)
+    return PipelineRunner(flows)
 
 
 def list_of_indicators() -> None:
@@ -160,7 +160,7 @@ def build_args() -> argparse.ArgumentParser:
     return parse
 
 
-def valid_args() -> argparse.Namespace | None:
+def valid_args() -> argparse.Namespace:
     """
     Validate and parse command-line arguments.
 
@@ -174,7 +174,7 @@ def valid_args() -> argparse.Namespace | None:
     if args.list:
         print("List Available Indicators:")
         list_of_indicators()
-        return None
+        sys.exit(0)
 
     # single mode Validation
     if args.name:
@@ -233,6 +233,24 @@ def valid_args() -> argparse.Namespace | None:
     return args
 
 
+async def build_config(args: argparse.Namespace) -> PipelineConfig:
+    """
+    Build and validate pipeline configuration.
+    """
+    stage = Stage(args.stage)
+    source: list[Any] = args.source or []
+    return PipelineConfig(
+        stage=stage,
+        source=source,
+        country=args.country,
+        indicator_name=args.name,
+        export_json=args.export_json,
+        replay=args.replay,
+        persist_raw=args.persist_raw,
+        persist_stg=args.persist_stg,
+    )
+
+
 async def main():
     """
     Main entry point for the pipeline execution.
@@ -241,10 +259,6 @@ async def main():
     argument parsing, database connection setup, and data processing stages.
     """
     args = valid_args()
-
-    # if list indicator called
-    if args is None:
-        return None
 
     # Setup logging
     try:
@@ -264,16 +278,15 @@ async def main():
             timeout=10,
         ) as pool:
             # Execute Pipeline
-            orchest: PipelineCliParser = build_injection(pool)
+            runner: PipelineRunner = build_injection(pool)
+            cfg = await build_config(args)
 
-            async with orchest as orch:
+            async with runner as orch:
                 # table create
-                await orch.flows.load_raw.create_register_path_table()
-                await orch.flows.load_raw.create_raw_respons_table()
-                await orch.flows.load_stg.create_stg_table()
+                await orch.flows.prepare_scheme_table()
 
                 # Execution
-                await orch.runner(args)
+                await orch.runner(cfg)
 
     except exc.PipelineCrash as e:
         logger.exception("Error during execution pipeline: %s", e)
