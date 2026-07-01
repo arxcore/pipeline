@@ -134,7 +134,7 @@ def build_args() -> argparse.ArgumentParser:
     stage_group.add_argument(
         "--stage",
         choices=["fetch", "parse", "all"],
-        default="all",
+        default="fetch",
         help="Execute specific stage. 'all' runs fetch>loadraw>parse>loadstg",
     )
 

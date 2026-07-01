@@ -1,4 +1,5 @@
 from datetime import datetime
+import random
 import aiohttp
 from src.providers.bea.model import BEAConfigModel
 from providers import BaseMetaModel
@@ -102,6 +103,8 @@ class BEAProvider:
 
         try:
             async with self.semaphore:
+                # delay between requests
+                await asyncio.sleep(random.uniform(1, 5))
                 # aiiohttp Context Manager
                 async with self.session.get(
                     self.url,

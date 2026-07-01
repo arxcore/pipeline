@@ -31,6 +31,8 @@ dependencies = [
     "dbt-postgres (>=1.10.0,<2.0.0)",
     "polars[calamine,rt64] (>=1.41.2,<2.0.0)",
     "xlsx2csv (>=0.8.6,<0.9.0)",
+    "aiofile (>=3.11.1,<4.0.0)",
+    "aiofiles (>=25.1.0,<26.0.0)",
 ]
 
 [dependency-groups]

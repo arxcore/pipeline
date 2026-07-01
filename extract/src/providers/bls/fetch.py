@@ -19,11 +19,19 @@ logger = logging.getLogger(__name__)
 
 
 class BLSProvider:
-    def __init__(self, api_key: str | None = None, limit_requests: int = 5):
+    def __init__(
+        self,
+        api_key: str | None = None,
+        limit_requests: int = 5,
+        max_batch_size: int = 30,
+    ):
         self.api_key = api_key
         self.url = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
         self.session: aiohttp.ClientSession | None = None
         self.semaphore = asyncio.Semaphore(limit_requests)  # Limit concurrent requests
+        self.max_batch_size = max_batch_size
+        self.daily_request_count = 0
+        self.max_daily_requests = 500
 
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
@@ -50,12 +58,12 @@ class BLSProvider:
         category: str | None = None,
         country: str | None = None,
     ) -> dict[str, Any] | None:
-        limit_event = ExternalLimit.get(meta.source)
+        limit_event = ExternalLimit.get(meta.source if meta else meta[0].source)
         # check the new assigment has arrived to the event loop and if the limit is reached before acquiring the semaphore
         if limit_event.is_set():
             logger.warning(
                 "%s daily limit already reached, skipping before entry semaphore queue.. skipping",
-                meta.source,
+                meta.source if meta else meta[0].source,
             )
             return None
 
@@ -65,20 +73,34 @@ class BLSProvider:
                 if limit_event.is_set():
                     logger.warning(
                         "%s limit Trigered while waiting in semaphore... skipping",
-                        meta.source,
+                        meta.source if meta else meta[0].source,
                     )
                     return None
                 # chekc api key
                 if not self.api_key:
                     raise exc.ResourceNotFound(f"{meta.source} apikey not found")
+                meta_list = [meta] if meta else meta
+                if len(meta_list) > self.max_batch_size:
+                    raise ValueError(
+                        f"BATCH size exceededs maximum of {self.max_batch_size}"
+                    )
+                for m in meta_list:
+                    if not m.code_name:
+                        raise ValueError("code name not found for %s", meta.code_name)
+
+                    if not m.start_year:
+                        raise ValueError("start year not found for %s", meta.code_name)
                 # end year
                 end_year = datetime.now().year
 
                 # build payload
-                payload: dict[str, list[str] | str | int] = {
-                    "seriesid": [meta.code_name],
+                payload: dict[str, Any] = {
+                    "seriesid": [m.code_name for m in meta_list],
                     "apikey": self.api_key,
-                    "startyear": meta.start_year,
+                    "startyear": min(
+                        m.start_year for m in meta_list if m.start_year is not None
+                    )
+                    or datetime.now().year - 20,
                     "endyear": end_year,
                 }
                 # check session if not exists
@@ -115,12 +137,35 @@ class BLSProvider:
                             raise exc.BLSRequestsError(
                                 msg[0] if msg else "Unknown api error"
                             )
+                        self.daily_request_count += 1
+
+                        if self.daily_request_count >= self.max_daily_requests * 0.9:
+                            logger.warning(
+                                "CRITICAL: 90% of daily quota used (%d/%d)",
+                                self.daily_request_count,
+                                self.max_daily_requests,
+                            )
+                        if self.daily_request_count >= self.max_daily_requests:
+                            logger.error(
+                                "Daily request limit reached (%d/%d)",
+                                self.daily_request_count,
+                                self.max_daily_requests,
+                            )
+                            limit_event.set()
 
                         logger.debug("json respons raw data BLS: %s", data)
+                        logger.info(
+                            "quota used (%d/%d)",
+                            self.daily_request_count,
+                            self.max_daily_requests,
+                        )
 
                         logger.info(
                             "BLS raw data validation done..  %s data",
-                            len(data["Results"]["series"][0]["data"]),
+                            sum(
+                                len(series["data"])
+                                for series in data["Results"]["series"]
+                            ),
                         )
 
                         return data

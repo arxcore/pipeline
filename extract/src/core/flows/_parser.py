@@ -30,9 +30,9 @@ async def parsing_all_db(
     api_data: list[ApiResult] | None
     file_data, api_data = data
     if file_data:
-        if persist_stg:
-            for item in file_data:
-                parser = route_task([item])
+        for item in file_data:
+            parser = route_task([item])
+            if persist_stg:
                 stg = staging_result(
                     item.indicator,
                     item.category,

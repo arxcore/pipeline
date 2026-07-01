@@ -1,153 +1,153 @@
-# ETL-Project
+# Macro Data Pipeline
 
-A multi-source economic data ETL pipeline built in Python. Fetches, parses, validates, and stores macroeconomic indicators from multiple government APIs into PostgreSQL.
+An automated, multi-source ELT pipeline designed to extract, normalize, and store macroeconomic indicators from major statistical agencies. The system prioritizes data fidelity by preserving raw vintage data, enabling accurate point-in-time historical analysis.
 
----
+## 🚀 Key Features
 
-## What It Does
+- Hybrid Ingestion Engine: Handles both REST API (JSON) and file-based (CSV/XLSX) sources with specialized parsing logic.
+- Vintage Data Preservation: Immutable raw storage in PostgreSQL JSONB to support "as-published" historical reconstruction.
+- High-Concurrency Fetching: Built on asyncio and aiohttp for efficient parallel data retrieval.
+- Strict Data Validation: Utilizes Pydantic strict models and Pyright for robust static typing and schema enforcement.
+- Advanced File Parsing: Implements Polars + Calamine with boundary detection for inconsistent Excel structures (e.g., ONS releases).
 
-- Fetches economic indicators from BLS, FRED, and BEA APIs
-- Parses and validates data using Pydantic v2 models
-- Calculates derived metrics: MoM, YoY, QoQ
-- Stores results in PostgreSQL
-- Structured logging with monitoring support
+## Current Scope
+
+| | |
+|---|---|
+| Countries | 2 (US, UK) |
+| **Indicators** | 45 (CPI, PPI, NFP, GDP, etc.) |
+| Sources | 4 (BLS, FRED, BEA — REST API · ONS — file-based CSV/XLSX) |
+
+## Architecture
+
+The pipeline employs a dual-path strategy to accommodate the fundamental differences between API-driven and file-driven data sources.
+
+- **API-based** (BLS, FRED, BEA) — request via REST API, response JSON
+- **File-based** (ONS) — server serve file Excel/CSV
+
+```mermaid
+graph TD
+    A[CLI: --stage] --> B[stage=fetch]
+    A --> C[stage=parse]
+    A --> D[stage=replay]
+
+    %% FETCH — API path
+    B --> E["Provider registry (@Provider decorator dispatch)"]
+    E --> F[BLS / FRED / BEA REST API call]
+    F --> G[Persist raw JSONB - ON CONFLICT by checksum]
+
+    %% FETCH — File path
+    E --> H[ONS file download - semaphore-limited, rate-aware]
+    H --> I[Save to downloads/]
+    I --> J[Register path in raw_file_registry]
+
+    %% PARSE — converges from both raw stores
+    C --> K[Fetch raw from DB - filter: source/country/indicator]
+    G --> K
+    J --> K
+    K --> L[Parse: API branch - Pydantic strict models]
+    K --> M[Parse: File branch - Polars + calamine, boundary detection]
+    L --> N[Standardize schema - StandardizedResult]
+    M --> N
+    N --> O[Load to staging table]
+
+    %% dbt layer
+    O --> P["dbt calc layer (MoM / YoY / net change)"]
+
+    %% replay
+    D --> K
+
+    style H fill:#3a2a1a,stroke:#c98a3a
+    style J fill:#3a2a1a,stroke:#c98a3a
+```
+
+*Orange Nodes = file-based path, which has failure modes and operational
+overhead not found in the API path (rate limiting at the HTTP response level,
+not API quotas; no built-in deduplication by query; content identity must
+be established manually).*
+
+## Core Components
+
+- Fetch Layer: Manages rate limiting, retries, and raw persistence.
+- Parse Layer: Converts heterogeneous raw data into a unified StandardizedResult model.
+- Load Layer: Inserts validated data into PostgreSQL staging tables.
+- Transform Layer: Uses dbt for declarative calculations (MoM, YoY, Net Change).
 
 ---
 
 ## Tech Stack
 
-| Component | Library |
+| Category | Technology |
 |---|---|
-| Language | Python 3.11+ (Poetry, Pyright strict) |
-| Validation | Pydantic v2 |
-| Database | PostgreSQL via psycopg2-binary |
-| Retry logic | Tenacity |
-| Testing | pytest |
-| APIs | BLS, FRED, BEA |
+| **Language** | Python 3.12+ (Async/Await) |
+| **Data Processing** | Polars, Calamine, Pydantic |
+| **Database** | PostgreSQL (JSONB, Relational) |
+| **Transformation** | dbt-core |
+| **Infrastructure** | Poetry, Docker (Optional) |
 
 ---
 
-## Project Structure
-```
-src/
-├── config/
-│   ├── constants/        # Shared constants and utils
-│   ├── metadata/         # Per-country indicator metadata
-│   │   ├── usa/          # labour, price, trade, money, business, consumer
-│   │   └── uk/           # labour, price, trade, business, consumer
-│   └── settings.py
-├── monitoring/
-│   └── base_logging/     # Structured logger
-├── pipeline/
-│   ├── calculation/      # MoM, YoY, QoQ, annualized calculations
-│   ├── parsers/          # Per-provider parse layer (BEA, BLS, FRED)
-│   ├── processors/       # Data, date, and indicator processors
-│   ├── routing/          # RoutingFetcher and parser dispatch
-│   └── orchestrator.py
-├── providers/            # API fetch + Pydantic models per source
-│   ├── bea/
-│   ├── bls/
-│   └── fred/
-└── upload/
-    └── postgres/         # PostgreSQL insert logic
-tests/
-└── unit/                 # Parser unit tests
-main.py                   # Entry point / CLI
-```
+## 📦 Installation & Setup
 
----
+### Prerequisites
 
-## Indicators Covered
+- Python 3.12+
+- PostgreSQL 15+
+- [Poetry](https://python-poetry.org/) for dependency management
 
-### USA
+### Quick Start
 
-| Category | Indicators |
-|---|---|
-| Labour | Non-Farm Payrolls, Unemployment Rate, Average Hourly Earnings |
-| Price | Core CPI, CPI |
-| Money | Fed Funds Rate |
-| Trade | Balance of Current Account (BEA) |
-| Consumer | Retail Sales |
-
-### UK *(coming soon)*
-
-| Category | Status |
-|---|---|
-| Labour | configured |
-| Price | configured |
-| Trade | configured |
-| Business | configured |
-| Consumer | configured |
-
----
-
-## Architecture Notes
-
-**Routing pattern** — dict-based dispatch avoids if/else chains:
-```python
-RoutingFetcher({"bls": BLSFetch(...), "fred": FREDFetch(...), "bea": BEAFetch(...)})
-```
-
-**Validation layers (BLS example):**
-```
-BlsFootnotes → BlsRawData → BlsResult → BlsSeries → BlsRawResponseData
-```
-
-**Standardized output across all sources:**
-```python
-StandardizedItems(name, source, date, value, frequency, processed)
-```
-
-**Custom exception hierarchy:**
-```
-ETLError → FetchError, ParseError, ValidationError
-         → BlsError, FredError, BeaError, FilterError, CalculatedError
-```
-
----
-
-## Setup
 ```bash
-# Clone
-git clone https://github.com/arxcore/etl-project.git
-cd etl-project
+# Clone repository
+git clone https://github.com/arxcore/pipeline.git
+cd pipeline
 
 # Install dependencies
 poetry install
 
-# Set environment variables
+# Configure environment variables
 cp .env.example .env
-# Add BLS_API_KEY, FRED_API_KEY, BEA_API_KEY, and PostgreSQL credentials
-
-# Help
-python src/main.py -h
-
-# Run all indicators
-python src/main.py
-
-# Run specific indicator
-python src/main.py --run single --name US_NFP
-
-# Debug mode
-python src/main.py --log debug
-
-# Upload to PostgreSQL
-python src/main.py --upload
+# Edit .env with your API keys (BLS, FRED, BEA) and DB credentials
 ```
 
+## 🚀 Usage
+
+The pipeline is controlled via CLI stages to allow for modular execution and debugging.
+
+```bash
+# Run all stages sequentially
+python extract/src/main.py
+
+# Fetch raw data only (handles API & File downloads)
+python extract/src/main.py --stage fetch 
+
+# Parse raw data and load to staging
+python extract/src/main.py --stage parse
+
+# Replay parsing from existing raw data (useful for schema updates)
+python extract/src/main.py --replay
+
+# View available options
+python extract/src/main.py -h
+```
+
+## 💡 Design Decisions
+
+- Why Immutable Raw Storage?
+  Macroeconomic indicators (e.g., NFP, GDP) are frequently revised after initial release. By storing raw responses immutably, the pipeline allows for accurate backtesting using the exact data available at any historical point in time.
+- Why Separate dbt Layer?
+  ETL logic (fetching/parsing) requires Python to handle source heterogeneity. dbt is used exclusively for declarative SQL transformations (calculations), ensuring that business logic is auditable and independent of ingestion code.
+- Why Dual Pipeline Paths?
+  API sources allow granular queries, while file-based sources (like ONS) require full-file downloads. This architectural divergence is necessary to handle the operational constraints of each source type efficiently.
+
 ---
 
-## Validated Against Real Data
+## ⚠️ Known Limitations & Operational Notes
 
-| Indicator | Source | Status |
-|---|---|---|
-| Core CPI YoY | BLS | 35 rows |
-| Non-Farm Payrolls | BLS | 48 rows |
-| Unemployment Rate | BLS | ✓ |
-| Average Hourly Earnings MoM | BLS | ✓ |
-| Fed Funds Rate | FRED | ✓ |
-| Retail Sales MoM | FRED | ✓ |
-| Balance of Current Account | BEA | ✓ |
+- Pipeline Divergence: API and file-based paths currently have separate implementations for some features (e.g., JSON export). Future work aims to consolidate these via shared primitives.
+- Fetch Result Shapes: The fetch-all function may return varying shapes (tuple, list, None) depending on runtime data. Consumers should handle these cases explicitly.
+- File Deduplication: Currently lacks a robust mechanism for identifying unchanged files via ETag/Last-Modified headers.
 
----
+## 📝 License
 
+MIT License - see [LICENSE](LICENSE) file for details.
