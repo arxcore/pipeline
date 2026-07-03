@@ -148,6 +148,14 @@ python extract/src/main.py -h
 - Fetch Result Shapes: The fetch-all function may return varying shapes (tuple, list, None) depending on runtime data. Consumers should handle these cases explicitly.
 - File Deduplication: Currently lacks a robust mechanism for identifying unchanged files via ETag/Last-Modified headers.
 
+## Status
+
+     🚧 Active development. Currently working on:
+     - [x] Async fetch layer (BLS, FRED, BEA, ONS)
+     - [x] Raw JSONB persistence with checksum dedup
+     - [ ] dbt calculation layer (basic MoM/YoY working, refactoring to dbt-native ref() pattern)
+     - [ ] Test coverage
+
 ## 📝 License
 
 MIT License - see [LICENSE](LICENSE) file for details.

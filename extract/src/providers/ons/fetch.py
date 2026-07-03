@@ -46,7 +46,7 @@ class ONSProvider:
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=4, min=8, max=70),
-        retry=retry_if_exception(cast(Callable[[BaseException], bool], Retryable)),
+        retry=retry_if_exception(cast(Callable[[BaseException], bool], Retryable())),
         reraise=True,
     )
     async def fetch_data(

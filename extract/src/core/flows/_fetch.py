@@ -101,7 +101,7 @@ async def fetch_config_indicators(manager: FlowsManager, filter: PipelineFilter)
 
         if not valid_data and not valid_path:
             logger.warning("No valid data processed, skipping..")
-            return
+            return None
 
         logger.info("-" * 50)
         logger.info("Pipeline Summary:")
@@ -154,24 +154,30 @@ async def orchest_all_fetch(
     indicator: str | None = None,
 ):
     """Running all process of indicators"""
-    if source or country or indicator and country:
+    if source or country or (indicator and country):
         s = source if source else ""
         c = country if country else ""
         i = indicator if indicator else ""
         logger.info("Filter: %s  %s  %s", s, c, i)
-        data = await manager.run_all(country, indicator, source)
+        data: Fetchresult = await manager.run_all(country, indicator, source)
         try:
             if persist_raw and data is not None:
                 logger.debug("type data %s", type(data))
                 await manager.load_raw_result(data)
+
             if export_json:
+                # FIXME:
                 if isinstance(data, tuple):
-                    _, api_data = data
-                    for items in api_data:
+                    file_based, api_based = data
+                    for items in [file_based, api_based]:
+                        await manager.export_json(items)
+
+                if isinstance(data, list):
+                    for items in data:
                         await manager.export_json(items)
 
         except Exception as e:
-            logger.error("Unexpected Error %s", e)
+            logger.exception("Unexpected Error %s", e)
             raise
         return data
     if replay:

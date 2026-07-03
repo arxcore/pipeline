@@ -68,6 +68,7 @@ class PipelineRunner:
                     indicator=cfg.indicator_name,
                     persist_stg=cfg.persist_stg,
                 )
+            # default
             case Stage.ALL:
                 await self.flows.run_all_chain(
                     source=cfg.source,
