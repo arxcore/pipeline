@@ -151,7 +151,7 @@ python extract/src/main.py -h
 ## Status
 
      🚧 Active development. Currently working on:
-     - [x] Async fetch layer (BLS, FRED, BEA, ONS)
+     - [x] Async fetch layer (REST API)
      - [x] Raw JSONB persistence with checksum dedup
      - [ ] dbt calculation layer (basic MoM/YoY working, refactoring to dbt-native ref() pattern)
      - [ ] Test coverage
