@@ -1,10 +1,10 @@
 import yaml
 from pathlib import Path
-from src.providers.ons.model import ONSConfigModel
-from src.providers.bls.model import BLSConfigModel
-from src.providers.bea.model import BEAConfigModel
-from src.providers.fred.model import FREDConfigModel
-from src.providers.metamodel import BaseMetaModel
+from providers.ons.model import ONSConfigModel
+from providers.bls.model import BLSConfigModel
+from providers.bea.model import BEAConfigModel
+from providers.fred.model import FREDConfigModel
+from providers.metamodel import BaseMetaModel
 import logging
 
 logger = logging.getLogger(__name__)

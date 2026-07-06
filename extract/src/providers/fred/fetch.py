@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 from pydantic import ValidationError
+from core.models.pipeline_schemas import ApisRawResult
 from providers import BaseMetaModel
 import aiohttp
 from tenacity import (
@@ -11,7 +12,7 @@ from tenacity import (
 )
 import monitoring.exc_models as exc
 from providers.retry_http import Retryable
-from typing import Any, Callable, cast
+from typing import Callable, cast
 import asyncio
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class FREDProvider:
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=2, min=2, max=70),
-        retry=retry_if_exception(cast(Callable[[BaseException], bool], Retryable)),
+        retry=retry_if_exception(cast(Callable[[BaseException], bool], Retryable())),
         reraise=True,
     )
     async def fetch_data(
@@ -48,7 +49,8 @@ class FREDProvider:
         meta: BaseMetaModel,
         category: str | None = None,
         country: str | None = None,
-    ) -> dict[str, Any]:
+        indicator_name: str | None = None,
+    ) -> ApisRawResult:
         """Fetch FRED Data"""
 
         # chekc api key
@@ -112,7 +114,7 @@ class FREDProvider:
                             len(data["observations"]),
                         )
 
-                        return data
+                        return ApisRawResult(raw_respons=data)
 
                     except ValidationError as e:
                         raise exc.FREDRequestsError(

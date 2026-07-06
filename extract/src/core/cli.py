@@ -12,6 +12,7 @@ class Stage(Enum):
     FETCH = "fetch"
     PARSE = "parse"
     ALL = "all"
+    REPLAY = "replay"
 
 
 @dataclass
@@ -22,8 +23,6 @@ class PipelineConfig:
     source: list[str]
     country: str | None = None
     indicator_name: str | None = None
-    export_json: bool = False
-    replay: bool = False
     persist_raw: bool = False
     persist_stg: bool = False
 
@@ -55,15 +54,12 @@ class PipelineRunner:
                 await self.flows.orchest_all_fetch(
                     source=cfg.source,
                     persist_raw=cfg.persist_raw,
-                    replay=cfg.replay,
-                    export_json=cfg.export_json,
                     country=cfg.country,
                     indicator=cfg.indicator_name,
                 )
             case Stage.PARSE:
                 await self.flows.parsing_all_db(
                     source=cfg.source,
-                    export_json=cfg.export_json,
                     country=cfg.country,
                     indicator=cfg.indicator_name,
                     persist_stg=cfg.persist_stg,
@@ -72,7 +68,13 @@ class PipelineRunner:
             case Stage.ALL:
                 await self.flows.run_all_chain(
                     source=cfg.source,
-                    export_json=cfg.export_json,
+                    country=cfg.country,
+                    indicator=cfg.indicator_name,
+                )
+
+            case Stage.REPLAY:
+                await self.flows.replaying_raw_data(
+                    source=cfg.source,
                     country=cfg.country,
                     indicator=cfg.indicator_name,
                 )

@@ -1,6 +1,6 @@
 from pathlib import Path
 from config.settings import Resources
-from core.models.pipeline_schemas import FetchMeta, FileResult, ApiResult
+from core.models.pipeline_schemas import ApisRawResult, FetchMeta, FileResult, ApiResult
 from providers.bls import BLSProvider
 from providers.fred import FREDProvider
 from providers.bea import BEAProvider
@@ -11,6 +11,8 @@ import logging
 from datetime import datetime, timezone
 import monitoring.exc_models as exc
 from providers.ons.fetch import ONSProvider
+from providers.ons.model import OnsResult
+from upload.postgres.fetch_db import FetchDB
 
 logger = logging.getLogger(__name__)
 
@@ -18,13 +20,17 @@ logger = logging.getLogger(__name__)
 class RawProcessors:
     """Raw Processors Fetch ALL Prioviders Data"""
 
-    def __init__(self, resource: Resources | None = None):
+    def __init__(
+        self,
+        fetch_db: FetchDB,
+        resource: Resources | None = None,
+    ):
         self.resource = resource or Resources()
         self.providerd = {
             "bls": BLSProvider(api_key=self.resource.bls_api_key),
             "bea": BEAProvider(api_key=self.resource.bea_api_key),
             "fred": FREDProvider(api_key=self.resource.fred_api_key),
-            "ons": ONSProvider(),
+            "ons": ONSProvider(fetch_db),
         }
 
     async def __aenter__(self):
@@ -73,11 +79,14 @@ class RawProcessors:
             raise KeyError(f"Source {meta.source} not Found")
         try:
             providers_cls = self.providerd[meta.source]
-            raw_data = await providers_cls.fetch_data(meta, category, country)
+            raw_data = await providers_cls.fetch_data(meta, category, country, name)
 
-            if isinstance(raw_data, Path):
+            if isinstance(raw_data, (Path, OnsResult)):
                 return FileResult(
-                    file_path=raw_data,
+                    # WARN: DEBUG it in runtime watch
+                    file_path=raw_data.path
+                    if isinstance(raw_data, OnsResult)
+                    else raw_data,
                     country=country,
                     category=category,
                     indicator=name,
@@ -88,6 +97,7 @@ class RawProcessors:
                     unit=meta.unit,
                     sheet_name=meta.sheet_name,
                     description=meta.description,
+                    Etag=raw_data.etag if isinstance(raw_data, OnsResult) else None,
                 )
 
             if raw_data is None:
@@ -98,20 +108,27 @@ class RawProcessors:
                 )
                 return None
 
-            return ApiResult(
-                source_data=raw_data,
-                meta=FetchMeta(
-                    country=country,
-                    category=category,
-                    indicator=name,
-                    **meta.model_dump(mode="json"),
-                    load_at=datetime.now(timezone.utc).isoformat(),
-                    checksum=hashlib.sha256(
-                        json.dumps(raw_data, sort_keys=True).encode()
-                    ).hexdigest(),
-                ),
-            )
+            # all of apis result must be return dict
+            if isinstance(raw_data, ApisRawResult):
+                return ApiResult(
+                    source_data=raw_data.raw_respons,
+                    meta=FetchMeta(
+                        country=country,
+                        category=category,
+                        indicator=name,
+                        **meta.model_dump(mode="json"),
+                        load_at=datetime.now(timezone.utc).isoformat(),
+                        checksum=hashlib.sha256(
+                            json.dumps(raw_data.raw_respons, sort_keys=True).encode()
+                        ).hexdigest(),
+                    ),
+                )
+            else:
+                raise TypeError("Unknwon Type of Raw_Data", type(raw_data))
 
         except exc.FetchDataError:
             logger.exception("Error Fetch Data from Source %s", meta.source)
+            raise
+        except Exception as e:
+            logger.exception("Unexpected Error for indicator %s: %s", name, str(e))
             raise

@@ -113,6 +113,7 @@ class LoadRaw:
                                     unit TEXT,
                                     sheet_name TEXT,
                                     description TEXT NOT NULL,
+                                    etag TEXT,
                                     load_at TIMESTAMPTZ DEFAULT NOW(),
                                     UNIQUE (file_path, country, category, indicator)
                                 );
@@ -147,6 +148,7 @@ class LoadRaw:
                                 item.unit,
                                 item.sheet_name,
                                 item.description,
+                                item.etag,
                             )
                             for item in data
                         ]
@@ -160,8 +162,8 @@ class LoadRaw:
                         await acur.executemany(
                             """
                             INSERT INTO file_registry
-                                (file_path, file_ext, country, category, indicator, frequency, source, code_name, calc, unit, sheet_name, description)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                (file_path, file_ext, country, category, indicator, frequency, source, code_name, calc, unit, sheet_name, description, etag)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             ON CONFLICT (file_path, country, category, indicator)
                             DO NOTHING
                             """,

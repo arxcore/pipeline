@@ -1,7 +1,8 @@
 from datetime import datetime
 import random
 import aiohttp
-from src.providers.bea.model import BEAConfigModel
+from core.models.pipeline_schemas import ApisRawResult
+from providers.bea.model import BEAConfigModel
 from providers import BaseMetaModel
 import logging
 from tenacity import (
@@ -11,7 +12,7 @@ from tenacity import (
     wait_exponential,
 )
 import monitoring.exc_models as exc
-from typing import Any, Callable, cast
+from typing import Callable, cast
 from providers.retry_http import Retryable
 import asyncio
 from pydantic import ValidationError
@@ -51,7 +52,7 @@ class BEAProvider:
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=2, min=4, max=70),
-        retry=retry_if_exception(cast(Callable[[BaseException], bool], Retryable)),
+        retry=retry_if_exception(cast(Callable[[BaseException], bool], Retryable())),
         reraise=True,
     )
     async def fetch_data(
@@ -59,7 +60,8 @@ class BEAProvider:
         meta: BaseMetaModel,
         category: str | None = None,
         country: str | None = None,
-    ) -> dict[str, Any]:
+        indicator_name: str | None = None,
+    ) -> ApisRawResult:
         """Fetch data from BEA API"""
         # validate BEAConfigModel
         if not isinstance(meta, BEAConfigModel):
@@ -139,7 +141,7 @@ class BEAProvider:
                             len(data["BEAAPI"]["Results"]["Data"]),
                         )
 
-                        return data
+                        return ApisRawResult(raw_respons=data)
                     except aiohttp.ContentTypeError as e:
                         # TODO:
                         # test if content type not json fromat

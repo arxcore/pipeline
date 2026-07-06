@@ -7,7 +7,7 @@ from providers.metamodel import BaseMetaModel
 from pathlib import Path
 from datetime import datetime
 import hashlib
-from src.providers.ons.model import ONSConfigModel
+from providers.ons.model import ONSConfigModel, OnsResult
 import monitoring.exc_models as exc
 import uuid
 import aiofiles
@@ -18,14 +18,20 @@ from tenacity import (
     wait_exponential,
 )
 from providers.retry_http import Retryable
+from upload.postgres.fetch_db import FetchDB
 
 logger = logging.getLogger(__name__)
 
 
 class ONSProvider:
-    def __init__(self, limit_requests: int = 5):
+    def __init__(
+        self,
+        fetch_db: FetchDB,
+        limit_requests: int = 5,
+    ):
         self.semaphore = asyncio.Semaphore(limit_requests)
         self.session: aiohttp.ClientSession | None = None
+        self.fetch_db = fetch_db
 
         pass
 
@@ -50,12 +56,14 @@ class ONSProvider:
         reraise=True,
     )
     async def fetch_data(
-        self, meta: BaseMetaModel, category: str, country: str
-    ) -> Path | None:
+        self, meta: BaseMetaModel, category: str, country: str, indicator_name: str
+    ) -> OnsResult | Path | None:
         """fetch data ONSProvider"""
         # validate ONSConfigModel
         if not isinstance(meta, ONSConfigModel):
             raise TypeError("ONSProvider expect ONSConfigModel got %s", type(meta))
+        if not meta.code_name:
+            raise ValueError("code name not found for %s", meta.code_name)
 
         # build naming file
         ext = None
@@ -86,10 +94,26 @@ class ONSProvider:
         final_path = base_path / name
         tmp_path = final_path.with_suffix(".tmp")
 
-        # exit if file already exists
-        if final_path.exists():
-            logger.info("File already exists %s, skiping downloads -_", final_path.name)
-            return final_path
+        logger.info(
+            "code_name %s, indicator %s, source %s",
+            meta.code_name,
+            indicator_name,
+            meta.source,
+        )
+        etag_load = await self.fetch_db.load_etag(meta, indicator_name)
+        headers = {}
+        if etag_load:
+            for record in etag_load:
+                if record["etag"]:
+                    headers["If-None-Match"] = record["etag"]
+
+                    # exit if file already exists steal fresh
+                    logger.info(
+                        "file already fresh not fucking change for indicator %s, Etag %s",
+                        indicator_name,
+                        record["etag"],
+                    )
+                    return final_path
 
         if not self.session:
             raise aiohttp.client.ClientError("connection http session not initialized")
@@ -110,6 +134,8 @@ class ONSProvider:
                 async with self.session.get(
                     meta.url, timeout=aiohttp.ClientTimeout(total=30)
                 ) as r:
+                    etag = r.headers.get("ETag")
+
                     r.raise_for_status()
                     if "text/html" in r.headers.get("Content-Type", ""):
                         raise exc.FetchDataError(
@@ -119,11 +145,12 @@ class ONSProvider:
                     async with aiofiles.open(tmp_path, "wb") as f:
                         async for chunk in r.content.iter_chunked(8192 * 10):
                             await f.write(chunk)
-                # rename file
-                tmp_path.rename(final_path)
-                logger.info("Succesfully downloads file %s", final_path.name)
 
-                return final_path
+                    # rename file
+                    tmp_path.rename(final_path)
+                    logger.info("Succesfully downloads file %s", final_path.name)
+
+                    return OnsResult(path=final_path, ETag=etag)
 
             except aiohttp.ClientResponseError as e:
                 # error http 4xx, 5xx

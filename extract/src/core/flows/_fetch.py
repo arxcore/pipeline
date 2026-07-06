@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, cast
-from core.flows._utils import PipelineFilter, aplay_filters
+from core.flows._utils import PipelineFilter, aplay_filters, export_json
 from core.models.pipeline_schemas import (
     Fetchresult,
     FileResult,
@@ -11,7 +11,7 @@ from collections.abc import Coroutine
 from typing import Any
 import asyncio
 import logging
-import monitoring.exc_models as exc
+
 
 if TYPE_CHECKING:
     from .manager import FlowsManager
@@ -74,12 +74,12 @@ async def fetch_config_indicators(manager: FlowsManager, filter: PipelineFilter)
         for i, result in enumerate(results):
             tasks_info = tasks_names[i]
             if isinstance(result, BaseException):
-                logger.error(
+                logger.exception(
                     "Error task, skiping %s indicator..",
                     tasks_info["name"],
-                    exc_info=True,
                 )
                 error_count += 1
+
                 continue
             if isinstance(result, FileResult):
                 logger.info("Path append")
@@ -107,7 +107,7 @@ async def fetch_config_indicators(manager: FlowsManager, filter: PipelineFilter)
         logger.info("Pipeline Summary:")
         logger.info("   >> Total Indicators Processed: %s", len(results))
         logger.info("   >> Successfully Processed: %s Indicators", success_count)
-        logger.info("   >> Skipped Indicators: %s", skipped_count)
+        logger.info("   >> Skipped Failed Indicators: %s", skipped_count)
         logger.info("   >> Failed Indicators: %s", error_count)
 
         if valid_path and valid_data:
@@ -116,15 +116,14 @@ async def fetch_config_indicators(manager: FlowsManager, filter: PipelineFilter)
             return valid_path
 
         return valid_data
-    except exc.PipelineCrash as e:
-        logger.exception("Pipeline process carsh during operation %s", e)
+    except Exception as e:
+        logger.exception("Pipeline process carsh during operation %s", str(e))
         raise
 
 
 async def run_all_chain(
     manager: FlowsManager,
     source: list[str],
-    export_json: bool,
     country: str,
     indicator: str,
 ):
@@ -139,21 +138,18 @@ async def run_all_chain(
     await manager.load_raw_result(raw)
 
     # parse data from raw data
-    await manager.parsing_all_db(
-        source, export_json, country, indicator, persist_stg=True
-    )
+    await manager.parsing_all_db(source, country, indicator, persist_stg=True)
 
 
 async def orchest_all_fetch(
     manager: FlowsManager,
     source: list[str],
     persist_raw: bool = False,
-    replay: bool = False,
-    export_json: bool = False,
     country: str | None = None,
     indicator: str | None = None,
 ):
     """Running all process of indicators"""
+
     if source or country or (indicator and country):
         s = source if source else ""
         c = country if country else ""
@@ -165,38 +161,11 @@ async def orchest_all_fetch(
                 logger.debug("type data %s", type(data))
                 await manager.load_raw_result(data)
 
-            if export_json:
-                # FIXME:
-                if isinstance(data, tuple):
-                    file_based, api_based = data
-                    for items in [file_based, api_based]:
-                        await manager.export_json(items)
-
-                if isinstance(data, list):
-                    for items in data:
-                        await manager.export_json(items)
-
         except Exception as e:
             logger.exception("Unexpected Error %s", e)
             raise
         return data
-    if replay:
-        logger.info("Replaying data from database for all indicators...")
-        data = await manager.fetch_db.fetch_from_database(source, country, indicator)
 
-        if data is None:
-            return None
-
-        # file_data: list[Fetchresult]
-        api_data: list[ApiResult] | None
-        _, api_data = data
-        if data and export_json:
-            await manager.export_json(api_data)
-        else:
-            logger.warning("export json not suport into File-based")
-            return None
-
-        return data
     else:
         logger.info("running fetching full indicator")
         data = await manager.run_all()
@@ -204,18 +173,37 @@ async def orchest_all_fetch(
             logger.warning("No data to process for all indicators, skipping...")
             return None
         if isinstance(data[0], FileResult):
+            # FIXME::
             return data
         if persist_raw:
             logger.debug("type data %s", type(data))
             await manager.load_raw_result(data)
-        if export_json:
-            if isinstance(data, tuple):
-                _, api_data = data
-                for items in api_data:
-                    await manager.export_json(items)
-            else:
-                logger.warning("export json not suported")
         return data
+
+
+async def replaying_raw_data(
+    manager: FlowsManager,
+    source: list[str],
+    country: str | None = None,
+    indicator: str | None = None,
+):
+    """replaying raw data from database"""
+    logger.info("Replaying data from database for all indicators...")
+    db_raw = await manager.fetch_db.fetch_from_database(source, country, indicator)
+
+    if db_raw is None:
+        logger.warning(
+            "no raw data found in database for country %s, indicator %s, source %s",
+            country,
+            indicator,
+            source,
+        )
+        return None
+
+    logger.info("exporting data to json")
+    await export_json(db_raw, country, indicator)
+
+    return
 
 
 async def load_raw_result(manager: FlowsManager, data: Fetchresult):

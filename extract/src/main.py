@@ -3,7 +3,6 @@ from psycopg.rows import TupleRow
 from psycopg_pool import AsyncConnectionPool
 import asyncio
 import logging
-import sys
 import traceback
 from config.settings import CONN_STR
 from typing import Any, Optional
@@ -28,8 +27,8 @@ def build_injection(
     """Build Dependency Injection for Pipeline"""
     stg_db = LoadStg(pool)
     raw_db = LoadRaw(pool)
-    procc_raw = RawProcessors()
     fetch_db = FetchDB(pool)
+    procc_raw = RawProcessors(fetch_db)
     procc_parse = ParseProcessors()
     flows = FlowsManager(procc_raw, stg_db, raw_db, procc_parse, fetch_db)
     return PipelineRunner(flows)
@@ -115,7 +114,7 @@ def build_args() -> argparse.ArgumentParser:
     )
 
     # single run args
-    single_group = parse.add_argument_group("single indiator mode (only for -r single")
+    single_group = parse.add_argument_group("fetch specific indicator")
     single_group.add_argument("-c", "--country", help="country of indicator")
     single_group.add_argument("-n", "--name", help="name of indicators")
 
@@ -133,23 +132,18 @@ def build_args() -> argparse.ArgumentParser:
     stage_group = parse.add_argument_group(title="Pipeline Stages")
     stage_group.add_argument(
         "--stage",
-        choices=["fetch", "parse", "all"],
+        choices=["fetch", "parse", "all", "replay"],
         default="all",
-        help="Execute specific stage. 'all' runs fetch>loadraw>parse>loadstg",
+        help="""
+            fetch: fetch data from source
+            | parse: parse data from source
+            | all: fetch>loadraw>parse>loadstg
+            | replay: refetch data from database and inspect structure
+        """,
     )
 
     # utils
     utils_group = parse.add_argument_group("Utilities")
-    utils_group.add_argument(
-        "--export-json",
-        action="store_true",
-        help="Export pipeline state/results to json file",
-    )
-    utils_group.add_argument(
-        "--replay",
-        action="store_true",
-        help="refetch data from database and inspect structure",
-    )
 
     utils_group.add_argument(
         "--persist-raw", action="store_true", help="write raw respons into DB"
@@ -174,61 +168,49 @@ def valid_args() -> argparse.Namespace:
     if args.list:
         print("List Available Indicators:")
         list_of_indicators()
-        sys.exit(0)
+        raise SystemExit(0)
 
     # single mode Validation
     if args.name:
         if args.source is not None:
             logger.error("single run no options source")
             parser.print_help()
-            sys.exit(1)
+            raise SystemExit(1)
         if not args.country:
             logger.error("country is required in single run")
             parser.print_help()
-            sys.exit(1)
+            raise SystemExit(1)
 
         if not valid_input(args.country, indicator_name=args.name):
             logger.error(f"indicator {args.name}, country {args.country} not found")
             parser.print_help()
-            sys.exit(1)
+            raise SystemExit(1)
 
-    # replay only for stage fetch
-    if args.replay and args.stage != "fetch":
-        logger.warning("replay only for fetch stage from db")
-        parser.print_help()
-        sys.exit(1)
     # If replay mode, persist raw and stg should be false
-    if args.replay and (args.persist_raw or args.persist_stg):
+    if args.stage == "replay" and (args.persist_raw or args.persist_stg):
         logger.warning("Replay mode cannot be used with persist options")
         parser.print_help()
-        sys.exit(1)
+        raise SystemExit(1)
 
     if args.source and (args.country or args.name):
         logger.warning("filter source no options country or indicator -_")
         parser.print_help()
-        sys.exit(1)
-
-    # If export json, replay and dry run mode, persist raw and stg should be false
-    # because export json is for inspect data structure and pipeline state, not for persist data or replay data
-    if args.export_json and (args.persist_raw or args.persist_stg):
-        logger.warning("Export JSON cannot be used with  persist options")
-        parser.print_help()
-        sys.exit(1)
+        raise SystemExit(1)
 
     # If persist raw, persist stg should be false
     if args.persist_raw and args.persist_stg:
         logger.warning("Cannot persist both raw and staging data at the same time")
         parser.print_help()
-        sys.exit(1)
+        raise SystemExit(1)
     if args.persist_raw and args.stage != "fetch":
         logger.warning("persist_raw invalid stage")
         parser.print_help()
-        sys.exit(1)
+        raise SystemExit(1)
 
     if args.persist_stg and args.stage != "parse":
         logger.warning("persist_stg invalid stage")
         parser.print_help()
-        sys.exit(1)
+        raise SystemExit(1)
 
     return args
 
@@ -244,8 +226,6 @@ async def build_config(args: argparse.Namespace) -> PipelineConfig:
         source=source,
         country=args.country,
         indicator_name=args.name,
-        export_json=args.export_json,
-        replay=args.replay,
         persist_raw=args.persist_raw,
         persist_stg=args.persist_stg,
     )
@@ -274,7 +254,7 @@ async def main():
             conninfo=CONN_STR,
             min_size=1,
             max_size=7,
-            max_waiting=10,
+            max_waiting=30,
             timeout=10,
         ) as pool:
             # Execute Pipeline
@@ -291,7 +271,7 @@ async def main():
     except exc.PipelineCrash as e:
         logger.exception("Error during execution pipeline: %s", e)
         print(f"\nFull traceback: {traceback.format_exc()}")
-        sys.exit(1)
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

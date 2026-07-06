@@ -1,5 +1,6 @@
+from dataclasses import dataclass
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Any, TypeAlias, TypeGuard
 
 from core.models.parsing_schemas import ParsedItems
@@ -29,6 +30,7 @@ class FileResult(BaseMetaModel):
     indicator: str
     # source: str
     code_name: str | None = None
+    etag: str | None = Field(default=None, alias="Etag")
     # freq: str
     # calc: str
     # optional
@@ -50,3 +52,8 @@ def is_file_result(
 Fetchresult: TypeAlias = (
     list[ApiResult] | list[FileResult] | tuple[list[FileResult], list[ApiResult]] | None
 )
+
+
+@dataclass
+class ApisRawResult:
+    raw_respons: dict[str, Any]

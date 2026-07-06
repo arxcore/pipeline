@@ -6,6 +6,7 @@ from tenacity import (
     retry_if_exception,
     stop_after_attempt,
 )
+from core.models.pipeline_schemas import ApisRawResult
 from providers.metamodel import BaseMetaModel
 import logging
 import aiohttp
@@ -49,7 +50,7 @@ class BLSProvider:
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=2, min=2, max=60),
-        retry=retry_if_exception(cast(Callable[[BaseException], bool], Retryable)),
+        retry=retry_if_exception(cast(Callable[[BaseException], bool], Retryable())),
         reraise=True,
     )
     async def fetch_data(
@@ -57,7 +58,8 @@ class BLSProvider:
         meta: BaseMetaModel,
         category: str | None = None,
         country: str | None = None,
-    ) -> dict[str, Any] | None:
+        indicator_name: str | None = None,
+    ) -> ApisRawResult | None:
         limit_event = ExternalLimit.get(meta.source if meta else meta[0].source)
         # check the new assigment has arrived to the event loop and if the limit is reached before acquiring the semaphore
         if limit_event.is_set():
@@ -168,7 +170,7 @@ class BLSProvider:
                             ),
                         )
 
-                        return data
+                        return ApisRawResult(raw_respons=data)
 
                     except ValidationError as e:
                         raise exc.BLSRequestsError(

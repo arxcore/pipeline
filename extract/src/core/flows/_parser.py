@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 async def parsing_all_db(
     manager: FlowsManager,
     sources: list[str],
-    export_json: bool = False,
     country: str | None = None,
     indicator: str | None = None,
     persist_stg: bool = False,
@@ -51,10 +50,6 @@ async def parsing_all_db(
     if api_data:
         for item in api_data:
             parser = manager.parse.parse_data(item, item.meta.source, item.meta.freq)
-            if export_json:
-                await manager.export_json(
-                    parser.model_dump(mode="json"), item.meta.indicator
-                )
             if persist_stg:
                 stg = staging_result(
                     item.meta.indicator,
