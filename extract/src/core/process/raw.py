@@ -1,4 +1,3 @@
-from pathlib import Path
 from config.settings import Resources
 from core.models.pipeline_schemas import ApisRawResult, FetchMeta, FileResult, ApiResult
 from providers.bls import BLSProvider
@@ -81,12 +80,10 @@ class RawProcessors:
             providers_cls = self.providerd[meta.source]
             raw_data = await providers_cls.fetch_data(meta, category, country, name)
 
-            if isinstance(raw_data, (Path, OnsResult)):
+            if isinstance(raw_data, OnsResult):
                 return FileResult(
                     # WARN: DEBUG it in runtime watch
-                    file_path=raw_data.path
-                    if isinstance(raw_data, OnsResult)
-                    else raw_data,
+                    file_path=raw_data.path,
                     country=country,
                     category=category,
                     indicator=name,
@@ -97,7 +94,7 @@ class RawProcessors:
                     unit=meta.unit,
                     sheet_name=meta.sheet_name,
                     description=meta.description,
-                    Etag=raw_data.etag if isinstance(raw_data, OnsResult) else None,
+                    Etag=raw_data.etag,
                 )
 
             if raw_data is None:

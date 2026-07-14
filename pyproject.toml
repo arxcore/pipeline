@@ -69,4 +69,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 testpaths = ["extract/tests"]
-pythonpath = ["extract"]
+pythonpath = ["extract/src"]

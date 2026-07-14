@@ -37,7 +37,6 @@ class ONSProvider:
 
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
-        # await self.csv.__aenter__()
         return self
 
     async def __aexit__(
@@ -57,8 +56,12 @@ class ONSProvider:
     )
     async def fetch_data(
         self, meta: BaseMetaModel, category: str, country: str, indicator_name: str
-    ) -> OnsResult | Path | None:
+    ) -> OnsResult | None:
         """fetch data ONSProvider"""
+        # FIXME: cleaning old file downloads before new downloads file
+        # If-None-Match return old file and the etag or do nothing
+        # if match and old file exists = unlink old file and fresh download also store frees registry and etag
+
         # validate ONSConfigModel
         if not isinstance(meta, ONSConfigModel):
             raise TypeError("ONSProvider expect ONSConfigModel got %s", type(meta))
@@ -101,6 +104,8 @@ class ONSProvider:
             meta.source,
         )
         etag_load = await self.fetch_db.load_etag(meta, indicator_name)
+
+        # check if file steal fresh
         headers = {}
         if etag_load:
             for record in etag_load:
@@ -113,7 +118,24 @@ class ONSProvider:
                         indicator_name,
                         record["etag"],
                     )
-                    return final_path
+                    return OnsResult(path=record["file_path"], ETag=record["etag"])
+
+                # remove unfresh link registry db and local file
+                if record["file_path"]:
+                    path = Path(record["file_path"])
+                    if path.exists():
+                        logger.info(
+                            "File Path %s found, for %s: %s, deleting...",
+                            path,
+                            meta.code_name,
+                            indicator_name,
+                        )
+                        path.unlink()
+
+                        # remove file registry duplicat handling before fresh downloads
+                        await self.fetch_db.delete_path_file_registry(
+                            meta, indicator_name
+                        )
 
         if not self.session:
             raise aiohttp.client.ClientError("connection http session not initialized")

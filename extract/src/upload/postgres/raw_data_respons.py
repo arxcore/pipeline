@@ -62,7 +62,7 @@ class LoadRaw:
                         """
                     )
 
-    async def load_raw_respons(self, data: list[dict[str, Any]]) -> None:
+    async def load_raw_respons(self, data: list[dict[str, Any]]):
         """Load Data"""
         try:
             async with (

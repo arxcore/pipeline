@@ -216,11 +216,11 @@ class FetchDB:
 
         where = f" WHERE {' AND '.join(conditional)}" if conditional else ""
         query = f"""
-        SELECT DISTINCT ON (indicator, code_name, source, etag)
-        indicator, code_name, source, etag, load_at
+        SELECT DISTINCT ON (file_path, indicator, code_name, source, etag)
+        file_path, indicator, code_name, source, etag, load_at
         FROM file_registry
         {where}
-        ORDER BY indicator, code_name, source, etag, load_at DESC;
+        ORDER BY file_path, indicator, code_name, source, etag, load_at DESC;
         """
         logger.debug("Query Filters: %s", query)
         logger.debug("params %s", params)
@@ -239,6 +239,52 @@ class FetchDB:
                             meta.code_name,
                         )
                         return None
+
+        except psycopg_pool.PoolTimeout as e:
+            logger.error("connection timeout while trying load data %s", e)
+            raise SystemExit(1)
+        except psycopg_pool.PoolClosed as e:
+            logger.error("Connection pool is closed while trying to load data: %s", e)
+            raise SystemExit(1)
+        except psycopg.OperationalError as e:
+            logger.error("Operational error while trying to load data: %s", e)
+            raise SystemExit(1)
+
+    async def delete_path_file_registry(
+        self, meta: ONSConfigModel, indicator_name: str
+    ):
+        source = [meta.source]
+        conditional: list[Any] = []
+        params: list[Any] = []
+        if source:
+            conditional.append("source = ANY(%s)")
+            params.append(source)
+        if meta.code_name:
+            conditional.append("code_name = %s")
+            params.append(meta.code_name)
+        if indicator_name:
+            conditional.append("indicator = %s")
+            params.append(indicator_name)
+
+        where = f"WHERE {' AND '.join(conditional)}" if conditional else ""
+
+        # FIXME: delete if exists query??
+        query = f"""
+        DELETE
+        FROM 
+            file_registry
+        {where};
+        """
+        logger.info("Delete file path registry")
+        logger.info("   params: %s", params)
+        logger.info("   Query: %s", query)
+
+        try:
+            async with self.pool.connection() as aconn:
+                async with aconn:
+                    async with aconn.cursor() as acur:
+                        await acur.execute(query, params)
+                        await acur.fetchall()
 
         except psycopg_pool.PoolTimeout as e:
             logger.error("connection timeout while trying load data %s", e)

@@ -187,3 +187,5 @@ class BLSProvider:
             raise exc.BLSRequestsError(f"HTTP Error: {e.status}") from e
         except aiohttp.ClientError as e:
             raise exc.BLSRequestsError(f"HTTP Client Error: {e}") from e
+        except Exception as e:
+            raise exc.BLSRequestsError("Unexpected Error For BLS %s", str(e))
