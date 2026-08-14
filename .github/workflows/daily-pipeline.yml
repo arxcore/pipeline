@@ -9,6 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     name: Run Daily Pipeline
     environment: pipeline
+    env:
+      SB_HOST: ${{ secrets.SB_HOST }}
+      SB_PORT: ${{ secrets.SB_PORT }}
+      SB_USER: ${{ secrets.SB_USER }}
+      SB_PASSWORD: ${{ secrets.SB_PASSWORD }}
+      SB_DATABASE: ${{ secrets.SB_DATABASE }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,20 +36,14 @@ jobs:
           poetry install --no-interaction --no-ansi --no-root
 
       - name: Run Pipeline
-        env:
-          SB_HOST: ${{ secrets.SB_HOST }}
-          SB_PORT: ${{ secrets.SB_PORT }}
-          SB_USER: ${{ secrets.SB_USER }}
-          SB_PASSWORD: ${{ secrets.SB_PASSWORD }}
-          SB_DATABASE: ${{ secrets.SB_DATABASE }}
         run: |
-          PYTHONPATH=extract/src:extract python -m extract.src.main --log-level info
+          cd extract
+          PYTHONPATH=src:. poetry run python -m src.main --log-level info
 
       - name: Run DBT
+        working-directory: transforms
         env:
-          SB_HOST: ${{ secrets.SB_HOST }}
-          SB_PORT: ${{ secrets.SB_PORT }}
-          SB_USER: ${{ secrets.SB_USER }}
-          SB_PASSWORD: ${{ secrets.SB_PASSWORD }}
-          SB_DATABASE: ${{ secrets.SB_DATABASE }}
-        run: dbt run --select final_data
+          DBT_PROFILES_DIR: .
+        run: |
+          VENV_BIN=$(cd ../extract && poetry env info --path)/bin
+          $VENV_BIN/dbt run --select final_data
