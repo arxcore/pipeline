@@ -1,0 +1,9 @@
+pipeline_macro:
+  target: dev
+  outputs:
+    dev:
+      type: postgre
+      account: postgres
+      database: "{{ .env('DB_NAME') }}"
+      schema: "{{ .env('DB_SCHEMA') }}"
+      threads: 5

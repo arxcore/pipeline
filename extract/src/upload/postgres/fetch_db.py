@@ -7,7 +7,7 @@ from psycopg_pool import AsyncConnectionPool
 import logging
 import psycopg_pool
 import psycopg
-from core.models.pipeline_schemas import FetchMeta, FileResult, ApiResult
+from core.models.pipeline_schemas import EtagLoad, FetchMeta, FileResult, ApiResult
 from providers.ons.model import ONSConfigModel
 
 
@@ -206,7 +206,7 @@ class FetchDB:
         params: list[Any] = []
         if source:
             conditional.append("source = ANY(%s)")
-            params.append([source])
+            params.append(source)
         if meta.code_name:
             conditional.append("code_name = %s")
             params.append(meta.code_name)
@@ -231,7 +231,15 @@ class FetchDB:
                         await acur.execute(query, params)
                         record = await acur.fetchall()
                         if record:
-                            return record
+                            while True:
+                                for r in record:
+                                    return EtagLoad(
+                                        file_path=r["file_path"],
+                                        indicator=r["indicator"],
+                                        code_name=r["code_name"],
+                                        source=r["source"],
+                                        etag=r["etag"],
+                                    )
                         logger.warning(
                             "No resource headers in database found for %s, %s, %s",
                             indicator_name,
@@ -268,7 +276,6 @@ class FetchDB:
 
         where = f"WHERE {' AND '.join(conditional)}" if conditional else ""
 
-        # FIXME: delete if exists query??
         query = f"""
         DELETE
         FROM 

@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: final_data
+    description: "Hasil kalkulasi MoM/YoY/net dari staging_indicators"
+    columns:
+      - name: id
+        data_tests:
+          - not_null
+      - name: value
+        data_tests:
+          - not_null
+      - name: method
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["raw", "mom", "yoy", "net"]
+      - name: final_metric
+        data_tests:
+          - not_null
+sources:
+  - name: staging
+    schema: public
+    tables:
+      - name: staging_indicators

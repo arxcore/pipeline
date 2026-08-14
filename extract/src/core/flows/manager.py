@@ -15,7 +15,7 @@ from config.metadata.load_yaml import load_all_indicator
 from typing import Optional
 from types import TracebackType
 from core.models.pipeline_schemas import (
-    Fetchresult,
+    FetchBatchResult,
 )
 import logging
 
@@ -65,7 +65,7 @@ class FlowsManager:
         await self.load_raw.create_register_path_table()
         await self.load_raw.create_raw_respons_table()
 
-    async def fetch_config_indicator(self, filter: PipelineFilter):
+    async def fetch_config_indicators(self, filter: PipelineFilter):
         return await fetch_config_indicators(self, filter)
 
     async def run_all(
@@ -110,5 +110,7 @@ class FlowsManager:
     ):
         return await replaying_raw_data(self, source, country, indicator)
 
-    async def load_raw_result(self, data: Fetchresult):
-        return await load_raw_result(self, data)
+    async def load_raw_result(
+        self, data: FetchBatchResult | None, indicator: str | None
+    ):
+        return await load_raw_result(self, data, indicator)

@@ -23,7 +23,7 @@ async def run_all_chain(
         logger.warning("No data to process for all indicators, skipping...")
         return None
 
-    await manager.load_raw_result(raw)
+    await manager.load_raw_result(raw, indicator)
 
     # parse data from raw data
     await manager.parsing_all_db(source, country, indicator, persist_stg=True)

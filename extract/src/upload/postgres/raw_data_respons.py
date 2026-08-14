@@ -7,8 +7,8 @@ from psycopg import AsyncConnection
 import psycopg_pool
 import logging
 from psycopg.types.json import Json
-
 from core.models.pipeline_schemas import FileResult
+
 
 logger = logging.getLogger(__name__)
 

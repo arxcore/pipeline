@@ -49,17 +49,16 @@ class PipelineRunner:
     async def runner(self, cfg: PipelineConfig):
         """Execute cli runner Pipeline"""
         logger.info("Running Pipeline Stage: %s", cfg.stage)
-        data = None
         match Stage(cfg.stage):
             case Stage.FETCH:
-                data = await self.flows.orchest_all_fetch(
+                await self.flows.orchest_all_fetch(
                     source=cfg.source,
                     persist_raw=cfg.persist_raw,
                     country=cfg.country,
                     indicator=cfg.indicator_name,
                 )
             case Stage.PARSE:
-                data = await self.flows.parsing_all_db(
+                await self.flows.parsing_all_db(
                     source=cfg.source,
                     country=cfg.country,
                     indicator=cfg.indicator_name,
@@ -67,17 +66,15 @@ class PipelineRunner:
                 )
             # default
             case Stage.ALL:
-                data = await self.flows.run_all_chain(
+                await self.flows.run_all_chain(
                     source=cfg.source,
                     country=cfg.country,
                     indicator=cfg.indicator_name,
                 )
 
             case Stage.REPLAY:
-                data = await self.flows.replaying_raw_data(
+                await self.flows.replaying_raw_data(
                     source=cfg.source,
                     country=cfg.country,
                     indicator=cfg.indicator_name,
                 )
-
-        logger.info("final Pipeline %s", data)

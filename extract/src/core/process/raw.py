@@ -1,5 +1,11 @@
 from config.settings import Resources
-from core.models.pipeline_schemas import ApisRawResult, FetchMeta, FileResult, ApiResult
+from core.models.pipeline_schemas import (
+    ApisRawResult,
+    FetchMeta,
+    FilePathResult,
+    FileResult,
+    ApiResult,
+)
 from providers.bls import BLSProvider
 from providers.fred import FREDProvider
 from providers.bea import BEAProvider
@@ -10,10 +16,21 @@ import logging
 from datetime import datetime, timezone
 import monitoring.exc_models as exc
 from providers.ons.fetch import ONSProvider
-from providers.ons.model import OnsResult
 from upload.postgres.fetch_db import FetchDB
 
 logger = logging.getLogger(__name__)
+# FIXME: debug single indicator
+# Core_PCE_MoM indicator..
+# InitialJoblessClaim indicator..
+# CurrentAccount indicator..
+# Fed_Interest_Rate indicator..
+# M2_Supply indicator..
+# Retail_Sales_MoM indicator..
+#  Michigan_Consumer_Sentiment indicator..
+# Retail_SalesValue_MoM indicator..
+# Retail_SalesVolume_MoM indicator..
+# IndustrialProduction_YoY indicator..
+# IndustrialProduction_MoM indicator..
 
 
 class RawProcessors:
@@ -80,9 +97,10 @@ class RawProcessors:
             providers_cls = self.providerd[meta.source]
             raw_data = await providers_cls.fetch_data(meta, category, country, name)
 
-            if isinstance(raw_data, OnsResult):
+            # NOTE: fix it to handel multiple File result not only ons providers,laters
+            if isinstance(raw_data, FilePathResult):
                 return FileResult(
-                    # WARN: DEBUG it in runtime watch
+                    # WARN: watch on runtime running
                     file_path=raw_data.path,
                     country=country,
                     category=category,
@@ -96,14 +114,6 @@ class RawProcessors:
                     description=meta.description,
                     Etag=raw_data.etag,
                 )
-
-            if raw_data is None:
-                logger.warning(
-                    "No data fetched for Source %s, Code %s",
-                    meta.source,
-                    meta.code_name,
-                )
-                return None
 
             # all of apis result must be return dict
             if isinstance(raw_data, ApisRawResult):
@@ -120,8 +130,16 @@ class RawProcessors:
                         ).hexdigest(),
                     ),
                 )
-            else:
-                raise TypeError("Unknwon Type of Raw_Data", type(raw_data))
+
+            if not raw_data:
+                logger.warning(
+                    "No data fetched for Source %s, Code %s",
+                    meta.source,
+                    meta.code_name,
+                )
+                return None
+
+            raise TypeError(f"Unhandel type {type(raw_data)}")
 
         except exc.FetchDataError:
             logger.exception("Error Fetch Data from Source %s", meta.source)

@@ -12,6 +12,10 @@ from base_exc import (
 logger = logging.getLogger(__name__)
 
 
+class Fetch:
+    data
+
+
 def t():
     try:
         logger.info("exception test")
@@ -66,9 +70,31 @@ def f():
         print("hm")
 
 
+def i():
+
+    df = [{"a": 1, "b": 2, "c": 3, "d": 4, "e": 5}]
+    while True:
+        for i in df:
+            return i
+
+
+def c():
+    a = ["a", "b", "c"]
+    if a[0] == "a":
+        print("available", a)
+        raise ValueError
+    else:
+        print("not available")
+
+
+def a():
+    pass
+
+
 def main():
     try:
-        f()
+        p = c()
+        print(p)
     # helo word("print")
     except SyntaxError as e:
         raise PipelineCrash(e)

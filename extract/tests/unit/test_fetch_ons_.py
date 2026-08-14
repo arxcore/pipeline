@@ -1,10 +1,11 @@
 from pathlib import PosixPath
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from pytest_mock import MockerFixture
 from providers.ons.fetch import ONSProvider
-from providers.ons.model import ONSConfigModel, OnsResult
+from providers.ons.model import ONSConfigModel
+from core.models.pipeline_schemas import FilePathResult
 
-DATA = OnsResult(
+DATA = FilePathResult(
     path=PosixPath(
         "/home/arzswdy/sys/service/pipeline/downloads/ons/uk/price/D7OE_49b056b0_20260707_53697d7b.csv"
     ),
@@ -26,10 +27,17 @@ async def test_fetch_ons(mocker: MockerFixture):
     mock = AsyncMock()
     mock.status = 200
     mock.raise_for_status = AsyncMock()
+    mock.headers = {"Content-Type": "application/json"}
+    
+    mock_content = MagicMock()
+    async def mock_iter_chunked(n):
+        yield b"mock_data"
+    mock_content.iter_chunked = mock_iter_chunked
+    mock.content = mock_content
+
     mock_get = AsyncMock()
     mock_get.__aenter__ = AsyncMock(return_value=mock)
     mock_get.__aexit__ = AsyncMock(return_value=None)
-    mock_get.headers = AsyncMock(return_value=mock)
     mocker.patch("aiohttp.ClientSession.get", return_value=mock_get)
     async with ONSProvider(fetch_db=AsyncMock(return_value=DATA)) as prov:
         # FIXME:
@@ -41,4 +49,4 @@ async def test_fetch_ons(mocker: MockerFixture):
             country="uk",
             indicator_name="CPI_MoM",
         )
-        assert isinstance(result, OnsResult)
+        assert isinstance(result, FilePathResult)
