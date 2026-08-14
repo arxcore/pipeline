@@ -15,6 +15,9 @@ jobs:
       SB_USER: ${{ secrets.SB_USER }}
       SB_PASSWORD: ${{ secrets.SB_PASSWORD }}
       SB_DATABASE: ${{ secrets.SB_DATABASE }}
+      BLS_API_KEY: ${{ secrets.BLS_API_KEY }}
+      BEA_API_KEY: ${{ secrets.BEA_API_KEY }}
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
