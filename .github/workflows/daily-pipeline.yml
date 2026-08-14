@@ -1,26 +1,14 @@
 name: Daily Economic Data Pipeline
-
 on:
   schedule:
-    - cron: '0 0 * * *'  # Run daily at midnight UTC
-  workflow_dispatch:  # Allow manual trigger
+    - cron: "0 0 * * *"
+  workflow_dispatch:
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
     name: Run Daily Pipeline
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-
+    environment: pipeline
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
@@ -41,20 +29,12 @@ jobs:
           cd extract
           poetry install --no-interaction --no-ansi
 
-      - name: Run ONS Pipeline
+      - name: Run Pipeline
         env:
-          POSTGRES_DSN: ${{ secrets.POSTGRES_DSN }}
-          # Fallback to individual credentials if POSTGRES_DSN not set
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: ${{ secrets.DB_PORT }}
-          DB_NAME: ${{ secrets.DB_NAME }}
+          SB_HOST: ${{ secrets.SB_HOST }}
+          SB_PORT: ${{ secrets.SB_PORT }}
+          SB_USER: ${{ secrets.SB_USER }}
+          SB_PASSWORD: ${{ secrets.SB_PASSWORD }}
+          SB_DATABASE: ${{ secrets.SB_DATABASE }}
         run: |
-          cd /home/runner/work/pipeline/pipeline
-          PYTHONPATH=extract/src:extract python -m extract.src.main --source ons --stage all --log-level info
-        
-      - name: Verify pipeline success
-        run: |
-          echo "Pipeline completed successfully"
-        # Note: The pipeline run itself will exit non-zero if it fails (see main.py exception handling)
+          PYTHONPATH=extract/src:extract python -m extract.src.main --log-level info

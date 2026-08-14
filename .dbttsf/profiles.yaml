@@ -1,9 +1,12 @@
-pipeline_macro:
+transforms:
   target: dev
   outputs:
     dev:
-      type: postgre
-      account: postgres
-      database: "{{ .env('DB_NAME') }}"
-      schema: "{{ .env('DB_SCHEMA') }}"
+      type: postgres
+      host: "{{ env_var('SB_HOST') }}"
+      port: "{{ env_var('SB_PORT') | int }}"
+      user: "{{ env_var('SB_USER') }}"
+      password: "{{ env_var('SB_PASSWORD') }}"
+      dbname: "{{ env_var('SB_DATABASE') }}"
+      schema: public
       threads: 5

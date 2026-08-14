@@ -144,7 +144,6 @@ def build_args() -> argparse.ArgumentParser:
 
     # utils
     utils_group = parse.add_argument_group("Utilities")
-    
 
     utils_group.add_argument(
         "--persist-raw", action="store_true", help="write raw respons into DB"
