@@ -19,18 +19,6 @@ from providers.ons.fetch import ONSProvider
 from upload.postgres.fetch_db import FetchDB
 
 logger = logging.getLogger(__name__)
-# FIXME: debug single indicator
-# Core_PCE_MoM indicator..
-# InitialJoblessClaim indicator..
-# CurrentAccount indicator..
-# Fed_Interest_Rate indicator..
-# M2_Supply indicator..
-# Retail_Sales_MoM indicator..
-#  Michigan_Consumer_Sentiment indicator..
-# Retail_SalesValue_MoM indicator..
-# Retail_SalesVolume_MoM indicator..
-# IndustrialProduction_YoY indicator..
-# IndustrialProduction_MoM indicator..
 
 
 class RawProcessors:
@@ -143,6 +131,9 @@ class RawProcessors:
 
         except exc.FetchDataError:
             logger.exception("Error Fetch Data from Source %s", meta.source)
+            raise
+        except TimeoutError as e:
+            logger.error("Timeout reached for %s: %s", meta.code_name, str(e))
             raise
         except Exception as e:
             logger.exception("Unexpected Error for indicator %s: %s", name, str(e))

@@ -128,8 +128,8 @@ class ONSProvider:
                 meta.code_name,
                 self.semaphore._value + 1,
             )
-            # delay between requests - Fix 2: increased from 3-8 to 15-30
-            await asyncio.sleep(random.uniform(15, 30))
+            # delay between requests - Fix 2: increased from 10 to 20
+            await asyncio.sleep(random.uniform(10, 15))
 
             filters = {k: v for k, v in header.items() if v is not None}
 
@@ -137,7 +137,6 @@ class ONSProvider:
             headers = filters if filters else None
 
             # Flag to track if we need to re-download without etag
-            need_redownload = False
             saved_etag = None
 
             # Try download with etag header first
@@ -154,72 +153,67 @@ class ONSProvider:
                             r.status,
                         )
                         # check if etag is not None
-                        if etag_load:
+                        if etag_load and etag_load.file_path.exists():
                             # check if file still exists locally
-                            if etag_load.file_path.exists():
-                                return FilePathResult(
-                                    path=etag_load.file_path, ETag=etag_load.etag
-                                )
-                            # File missing from disk, need to re-download without etag header
-                            logger.warning(
-                                "no file path found in local disk %s: %s",
-                                indicator_name,
-                                meta.code_name,
+                            return FilePathResult(
+                                path=etag_load.file_path, ETag=etag_load.etag
                             )
-                            need_redownload = True
+                            # File missing from disk, need to re-download without etag header
+                        logger.warning(
+                            "304 received but no file path found in local disk %s: %s",
+                            indicator_name,
+                            meta.code_name,
+                        )
+                        async with self.session.get(
+                            meta.url, timeout=aiohttp.ClientTimeout(total=60)
+                        ) as fresh_r:
+                            fresh_r.raise_for_status()
+                            if "text/html" in fresh_r.headers.get("Content-Type", ""):
+                                raise exc.FetchDataError(
+                                    "Expected file, got HTML from ONS for %s",
+                                    meta.code_name,
+                                )
+                            async with aiofiles.open(tmp_path, "wb") as f:
+                                async for chunk in fresh_r.content.iter_chunked(
+                                    8192 * 10
+                                ):
+                                    await f.write(chunk)
+
                             saved_etag = r.headers.get("ETag")
                     else:
                         r.raise_for_status()
 
-                    if "text/html" in r.headers.get("Content-Type", ""):
-                        raise exc.FetchDataError(
-                            "Expected file, got HTML from ONS for %s ", meta.code_name
-                        )
-
-                    async with aiofiles.open(tmp_path, "wb") as f:
-                        async for chunk in r.content.iter_chunked(8192 * 10):
-                            await f.write(chunk)
-
-                    saved_etag = r.headers.get("ETag")
-
-            except aiohttp.ClientResponseError as e:
-                if need_redownload:
-                    # Re-download without etag header (fix for nested context manager issue)
-                    logger.info("RE-Downloading %s without etag", indicator_name)
-                    async with self.session.get(
-                        meta.url, timeout=aiohttp.ClientTimeout(total=60)
-                    ) as r:
-                        r.raise_for_status()
                         if "text/html" in r.headers.get("Content-Type", ""):
                             raise exc.FetchDataError(
                                 "Expected file, got HTML from ONS for %s ",
                                 meta.code_name,
                             )
+
                         async with aiofiles.open(tmp_path, "wb") as f:
                             async for chunk in r.content.iter_chunked(8192 * 10):
                                 await f.write(chunk)
-                        saved_etag = r.headers.get("ETag")
-                else:
-                    # error http 4xx, 5xx
-                    logger.error(
-                        "HTTP Failed downloads file %s: %s, %s",
-                        meta.code_name,
-                        e.status,
-                        e.message,
-                    )
-                    if e.status == 429:
-                        logger.warning(
-                            "Rate limit reached will retry.. %s", meta.code_name
-                        )
-                        raise e
-                    elif e.status == 401:
-                        raise exc.AuthenticationError(
-                            "Authentication error from requests"
-                        ) from e
 
-                    if tmp_path.exists():
-                        tmp_path.unlink()
-                    raise
+                        saved_etag = r.headers.get("ETag")
+
+            except aiohttp.ClientResponseError as e:
+                # error http 4xx, 5xx
+                logger.error(
+                    "HTTP Failed downloads file %s: %s, %s",
+                    meta.code_name,
+                    e.status,
+                    e.message,
+                )
+                if e.status == 429:
+                    logger.warning("Rate limit reached will retry.. %s", meta.code_name)
+                    raise e
+                elif e.status == 401:
+                    raise exc.AuthenticationError(
+                        "Authentication error from requests"
+                    ) from e
+
+                if tmp_path.exists():
+                    tmp_path.unlink()
+                raise
             except aiohttp.ClientError as e:
                 # connection error, refused, timeout
                 logger.error("Failied downloads file %s: %s", meta.code_name, str(e))

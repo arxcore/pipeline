@@ -41,7 +41,7 @@ jobs:
       - name: Run Pipeline
         run: |
           cd extract
-          PYTHONPATH=src:. poetry run python -m src.main --log-level info
+          PYTHONPATH=src:. poetry run python -m src.main
 
       - name: Run DBT
         working-directory: transforms
