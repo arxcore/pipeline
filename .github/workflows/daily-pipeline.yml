@@ -38,3 +38,12 @@ jobs:
           SB_DATABASE: ${{ secrets.SB_DATABASE }}
         run: |
           PYTHONPATH=extract/src:extract python -m extract.src.main --log-level info
+
+      - name: Run DBT
+        env:
+          SB_HOST: ${{ secrets.SB_HOST }}
+          SB_PORT: ${{ secrets.SB_PORT }}
+          SB_USER: ${{ secrets.SB_USER }}
+          SB_PASSWORD: ${{ secrets.SB_PASSWORD }}
+          SB_DATABASE: ${{ secrets.SB_DATABASE }}
+        run: dbt run --select final_data
