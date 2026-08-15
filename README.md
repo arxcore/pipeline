@@ -554,9 +554,9 @@ See [scale_optimisasi.md](scale_optimisasi.md) for complete scaling analysis.
 
 | Document | Description |
 |----------|-------------|
-| [codebase_tracing.md](codebase_tracing.md) | Complete AS-IS runtime tracing and execution analysis |
-| [documentasi_pipeline.md](documentasi_pipeline.md) | Higher-level technical documentation |
-| [scale_optimisasi.md](scale_optimisasi.md) | Scaling analysis and optimization roadmap |
+| [codebase_tracing.md](docs/codebase_tracing.md) | Complete AS-IS runtime tracing and execution analysis |
+| [documentasi_pipeline.md](docs/documentasi_pipeline.md) | Higher-level technical documentation |
+| [scale_optimisasi.md](docs/scale_optimisasi.md) | Scaling analysis and optimization roadmap |
 
 ---
 
