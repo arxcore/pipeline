@@ -27,9 +27,6 @@
 17. [DBT TRANSFORMATION LAYER](#17-dbt-transformation-layer)
 18. [CLI EXECUTION MODES](#18-cli-execution-modes)
 19. [OPERATIONAL BEHAVIOR](#19-operational-behavior)
-20. [CONCRETE FINDINGS](#20-concrete-findings)
-21. [KNOWN LIMITATIONS](#21-known-limitations)
-22. [UNKNOWN/UNVERIFIED BEHAVIOR](#22-unknownunverified-behavior)
 
 ---
 
@@ -52,32 +49,37 @@ The Macro Data Pipeline is an **automated, multi-source ELT (Extract, Load, Tran
 ## 2. CURRENT SCOPE
 
 ### Countries
+
 - **2 countries:** United States (USA), United Kingdom (UK)
 - **Country codes:** `usa`, `uk`
 
 ### Providers
-| Provider | Type | Agency | Data Type |
-|---------|------|--------|----------|
-| BLS | API | Bureau of Labor Statistics | US economic data |
-| FRED | API | Federal Reserve Economic Data | US economic data |
-| BEA | API | Bureau of Economic Analysis | US economic data |
-| ONS | File | Office for National Statistics | UK economic data |
+
+| Provider | Type | Agency                         | Data Type        |
+| -------- | ---- | ------------------------------ | ---------------- |
+| BLS      | API  | Bureau of Labor Statistics     | US economic data |
+| FRED     | API  | Federal Reserve Economic Data  | US economic data |
+| BEA      | API  | Bureau of Economic Analysis    | US economic data |
+| ONS      | File | Office for National Statistics | UK economic data |
 
 ### Indicators
+
 - **Approximate count:** 50-60 indicators total across all categories
 - **Categories:**
   - **USA:** price, labour, trade, money, consumer, business (6 categories)
   - **UK:** price, labour, consumer, business, trade (5 categories)
 
 ### Supported Formats
-| Provider | Format | Content Type |
-|---------|--------|--------------|
-| BLS | JSON | REST API response |
-| FRED | JSON | REST API response |
-| BEA | JSON | REST API response |
-| ONS | CSV/XLSX | File download |
+
+| Provider | Format   | Content Type      |
+| -------- | -------- | ----------------- |
+| BLS      | JSON     | REST API response |
+| FRED     | JSON     | REST API response |
+| BEA      | JSON     | REST API response |
+| ONS      | CSV/XLSX | File download     |
 
 ### Frequencies
+
 - Monthly (most common)
 - Weekly (FRED only)
 - Quarterly (BEA)
@@ -328,10 +330,10 @@ class BaseProvider:
     async def __aenter__(self):  # Open session
         self.session = aiohttp.ClientSession()
         return self
-    
+
     async def __aexit__(self, ...):  # Close session
         await self.session.close()
-    
+
     @retry(...)
     async def fetch_data(self, meta, category, country, indicator_name):
         # Provider-specific implementation
@@ -341,6 +343,7 @@ class BaseProvider:
 ### API-Based Providers (BLS, FRED, BEA)
 
 **Common Characteristics:**
+
 - Use aiohttp for HTTP requests
 - Per-provider semaphore for concurrency control
 - Tenacity for retry with exponential backoff
@@ -349,15 +352,16 @@ class BaseProvider:
 
 **Provider-Specific Details:**
 
-| Provider | Endpoint | Auth | Rate Limiting | Special Features |
-|---------|----------|------|---------------|-----------------|
-| BLS | `https://api.bls.gov/publicAPI/v2/timeseries/data/` | API Key in payload | Daily quota (500) + shared state | POST with JSON payload, batch support |
-| FRED | `https://api.stlouisfed.org/fred/series/observations` | API Key in params | None | GET with query params |
-| BEA | `https://apps.bea.gov/api/data` | API Key (UserID) in params | Random delay (1-5s) | Complex params for dataset/table |
+| Provider | Endpoint                                              | Auth                       | Rate Limiting                    | Special Features                      |
+| -------- | ----------------------------------------------------- | -------------------------- | -------------------------------- | ------------------------------------- |
+| BLS      | `https://api.bls.gov/publicAPI/v2/timeseries/data/`   | API Key in payload         | Daily quota (500) + shared state | POST with JSON payload, batch support |
+| FRED     | `https://api.stlouisfed.org/fred/series/observations` | API Key in params          | None                             | GET with query params                 |
+| BEA      | `https://apps.bea.gov/api/data`                       | API Key (UserID) in params | Random delay (1-5s)              | Complex params for dataset/table      |
 
 ### File-Based Provider (ONS)
 
 **Characteristics:**
+
 - Downloads files from URLs specified in metadata
 - Uses aiohttp for HTTP downloads
 - Semaphore(1) for sequential downloads
@@ -367,6 +371,7 @@ class BaseProvider:
 - Returns `FilePathResult(path, ETag)`
 
 **File Types:**
+
 - CSV (parsed with Polars)
 - XLSX/XLS (parsed with Polars + Calamine engine)
 
@@ -377,17 +382,20 @@ class BaseProvider:
 ### API-Based Ingestion
 
 **Flow:**
+
 ```
 Metadata → Request Construction → HTTP Request → Response Validation → Raw Storage
 ```
 
 **Advantages:**
+
 - Granular queries (by series ID, date range)
 - Structured JSON responses
 - No local file storage needed
 - Checksum-based deduplication
 
 **Disadvantages:**
+
 - Rate limits and quotas
 - API key management
 - Different response formats per provider
@@ -395,16 +403,19 @@ Metadata → Request Construction → HTTP Request → Response Validation → R
 ### File-Based Ingestion
 
 **Flow:**
+
 ```
 Metadata (URL) → ETag Check → Download → Local Storage → Registry Entry
 ```
 
 **Advantages:**
+
 - No API keys needed
 - Full file available for complex parsing
 - ETag-based deduplication (no re-download if unchanged)
 
 **Disadvantages:**
+
 - Must download entire file (not granular)
 - Local storage management
 - File format variability (CSV vs Excel)
@@ -432,6 +443,7 @@ Metadata (URL) → ETag Check → Download → Local Storage → Registry Entry
 **Primary Function:** `fetch_config_indicators()` in `core/flows/_fetch.py`
 
 **Execution:**
+
 1. Apply filters to ALL_INDICATORS
 2. Create asyncio task for each matching indicator
 3. Execute all tasks concurrently with `asyncio.gather(return_exceptions=True)`
@@ -439,6 +451,7 @@ Metadata (URL) → ETag Check → Download → Local Storage → Registry Entry
 5. Return FetchBatchResult
 
 **Concurrency:**
+
 - Tasks run concurrently
 - Each provider has its own semaphore limiting concurrent requests
 - Global connection pool manages DB connections
@@ -466,6 +479,7 @@ Metadata (URL) → ETag Check → Download → Local Storage → Registry Entry
 ### Dual Parser Architecture
 
 **API-Based Parsers:** Registry-based dispatch
+
 ```python
 @register(Providers.bls, Frequency.monthly)
 def parse_monthly_bls(data: ApiResult) -> ParseResult:
@@ -476,6 +490,7 @@ def parse_monthly_bls(data: ApiResult) -> ParseResult:
 ```
 
 **File-Based Parsers:** Extension-based routing
+
 ```python
 def route_task(metafile: list[FileResult]):
     for x in metafile:
@@ -488,6 +503,7 @@ def route_task(metafile: list[FileResult]):
 ### Parser Implementation Details
 
 **Common Responsibilities:**
+
 - Validate input data structure
 - Extract date and value pairs
 - Convert values to Decimal for precision
@@ -496,19 +512,20 @@ def route_task(metafile: list[FileResult]):
 
 **Provider-Specific Parsing:**
 
-| Parser | Input Format | Key Transformations |
-|--------|--------------|---------------------|
-| BLS monthly | JSON with series/year/period | Convert period to YYYY-MM-DD, handle footnotes |
-| FRED monthly | JSON with observations/date/value | Direct date/value mapping |
-| FRED weekly | JSON with observations/date/value | Same as monthly |
-| BEA monthly | JSON with Data/TimePeriod/DataValue | Split TimePeriod, filter SeriesCode |
-| BEA quarterly | JSON with Data/TimePeriod/DataValue | Split TimePeriod, convert to quarterly date |
-| ONS CSV | CSV with period/value columns | Pattern-based period parsing, regex filtering |
-| ONS Excel | Excel with complex structure | Boundary detection, code name search, Polars + Calamine |
+| Parser        | Input Format                        | Key Transformations                                     |
+| ------------- | ----------------------------------- | ------------------------------------------------------- |
+| BLS monthly   | JSON with series/year/period        | Convert period to YYYY-MM-DD, handle footnotes          |
+| FRED monthly  | JSON with observations/date/value   | Direct date/value mapping                               |
+| FRED weekly   | JSON with observations/date/value   | Same as monthly                                         |
+| BEA monthly   | JSON with Data/TimePeriod/DataValue | Split TimePeriod, filter SeriesCode                     |
+| BEA quarterly | JSON with Data/TimePeriod/DataValue | Split TimePeriod, convert to quarterly date             |
+| ONS CSV       | CSV with period/value columns       | Pattern-based period parsing, regex filtering           |
+| ONS Excel     | Excel with complex structure        | Boundary detection, code name search, Polars + Calamine |
 
 ### Parser Input/Output
 
 **Input (API):**
+
 ```python
 ApiResult(
     source_data=dict,  # Raw JSON from provider
@@ -525,6 +542,7 @@ ApiResult(
 ```
 
 **Input (File):**
+
 ```python
 FileResult(
     file_path=Path,
@@ -543,6 +561,7 @@ FileResult(
 ```
 
 **Output (Unified):**
+
 ```python
 ParseResult(
     parse_result=[
@@ -563,33 +582,37 @@ ParseResult(
 ### RawProcessors
 
 **Responsibilities:**
+
 - Initialize all provider instances
 - Manage provider session lifecycle
 - Orchestrate concurrent fetching
 - Transform provider results to unified format
 
 **Key Function:**
+
 ```python
 async def process_raw_data(self, name, meta, category, country):
     provider = self.providerd[meta.source]
     raw_data = await provider.fetch_data(meta, category, country, name)
-    
+
     if isinstance(raw_data, FilePathResult):
         return FileResult(...)  # Build from file result
-    
+
     if isinstance(raw_data, ApisRawResult):
         return ApiResult(...)  # Build with checksum
-    
+
     return None  # No data
 ```
 
 ### ParseProcessors
 
 **Responsibilities:**
+
 - Route API-based parsing through registry
 - Validate parser registration
 
 **Key Function:**
+
 ```python
 def parse_data(self, raw_data: ApiResult, api: str, freq: str | None):
     if api not in PARSE_REGISTER:
@@ -602,6 +625,7 @@ def parse_data(self, raw_data: ApiResult, api: str, freq: str | None):
 ### staging_result()
 
 **Responsibilities:**
+
 - Transform ParseResult to StagingData
 - Convert string dates to date objects
 - Extract year from date
@@ -614,6 +638,7 @@ def parse_data(self, raw_data: ApiResult, api: str, freq: str | None):
 ### Database Design
 
 **Connection:**
+
 - `AsyncConnectionPool[AsyncConnection[TupleRow]]`
 - Configuration: min_size=1, max_size=7, max_waiting=30, timeout=10
 - Using psycopg (async PostgreSQL adapter)
@@ -625,6 +650,7 @@ def parse_data(self, raw_data: ApiResult, api: str, freq: str | None):
 **Purpose:** Immutable storage of API responses
 
 **Schema:**
+
 ```sql
 id BIGSERIAL PRIMARY KEY
 payload JSONB NOT NULL        -- Full response + metadata + checksum
@@ -639,9 +665,10 @@ INDEX idx_meta_codename ON ((payload -> 'meta' ->> 'code_name'))
 **Deduplication:** ON CONFLICT ((payload -> 'meta' ->> 'checksum')) DO NOTHING
 
 **Payload Structure:**
+
 ```json
 {
-  "source_data": {"raw": "json from provider"},
+  "source_data": { "raw": "json from provider" },
   "meta": {
     "country": "usa",
     "category": "price",
@@ -663,6 +690,7 @@ INDEX idx_meta_codename ON ((payload -> 'meta' ->> 'code_name'))
 **Purpose:** Tracking of downloaded files
 
 **Schema:**
+
 ```sql
 id BIGSERIAL PRIMARY KEY
 file_path TEXT NOT NULL
@@ -690,6 +718,7 @@ UNIQUE (file_path, country, category, indicator)
 **Purpose:** Processed, standardized time series data
 
 **Schema:**
+
 ```sql
 id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY
 date DATE NOT NULL
@@ -716,11 +745,11 @@ INDEX idx_stg_lookup ON (code, country, date)
 
 ### Load Classes
 
-| Class | Responsibility | Table |
-|-------|---------------|-------|
+| Class   | Responsibility                   | Table                          |
+| ------- | -------------------------------- | ------------------------------ |
 | LoadRaw | Load API raw data, file registry | raw_respons_api, file_registry |
-| LoadStg | Load staging data | staging_indicators |
-| FetchDB | Read raw data from DB | raw_respons_api, file_registry |
+| LoadStg | Load staging data                | staging_indicators             |
+| FetchDB | Read raw data from DB            | raw_respons_api, file_registry |
 
 ### Transaction Management
 
@@ -798,6 +827,7 @@ StagingData (same as API path)
 ### Environment Configuration
 
 **Primary Configuration:** Supabase database credentials
+
 ```python
 # In config/settings.py
 class Resources(BaseSettings):
@@ -814,6 +844,7 @@ CONN_STR = f"postgresql://{source.sb_user}:{source.sb_password}@{source.sb_host}
 ```
 
 **Configuration Source:**
+
 - Environment variables (primary)
 - `.env` file at repository root
 - All optional except Supabase credentials
@@ -821,6 +852,7 @@ CONN_STR = f"postgresql://{source.sb_user}:{source.sb_password}@{source.sb_host}
 ### Metadata Configuration
 
 **Structure:**
+
 ```
 config/metadata/
 ├── catalog.yaml          # Country → Categories mapping
@@ -835,6 +867,7 @@ config/metadata/
 ```
 
 **Metadata Model:**
+
 ```python
 # MODEL_MAP: provider string → Pydantic model class
 MODEL_MAP = {
@@ -847,12 +880,12 @@ MODEL_MAP = {
 
 **Provider-Specific Fields:**
 
-| Provider | Required Fields | Optional Fields |
-|---------|-----------------|-----------------|
-| BLS | code_name, source, freq, start_year, start_month, description | unit, calc, sheet_name |
-| FRED | code_name, source, freq, start_year, start_month, description | unit, calc, sheet_name |
-| BEA | code_name, source, dataset, freq, start_year, start_month, description | table, line_number, unit, calc, sheet_name |
-| ONS | url, code_name, source, freq, start_year, start_month, description | unit, calc, sheet_name |
+| Provider | Required Fields                                                        | Optional Fields                            |
+| -------- | ---------------------------------------------------------------------- | ------------------------------------------ |
+| BLS      | code_name, source, freq, start_year, start_month, description          | unit, calc, sheet_name                     |
+| FRED     | code_name, source, freq, start_year, start_month, description          | unit, calc, sheet_name                     |
+| BEA      | code_name, source, dataset, freq, start_year, start_month, description | table, line_number, unit, calc, sheet_name |
+| ONS      | url, code_name, source, freq, start_year, start_month, description     | unit, calc, sheet_name                     |
 
 ### Loading Process
 
@@ -899,6 +932,7 @@ PipelineCrash (Exception)
 ### Error Handling Patterns
 
 **1. Main Entry Point:**
+
 ```python
 try:
     # Run pipeline
@@ -908,9 +942,11 @@ except exc.PipelineCrash as e:
     print(f"\nFull traceback: {traceback.format_exc()}")
     raise SystemExit(1)
 ```
+
 - **F-001:** Only catches PipelineCrash - other exceptions propagate to asyncio.run()
 
 **2. Concurrent Task Execution:**
+
 ```python
 results = await asyncio.gather(*tasks, return_exceptions=True)
 for i, result in enumerate(results):
@@ -919,21 +955,25 @@ for i, result in enumerate(results):
         error_count += 1
         continue
 ```
+
 - Individual task failures are captured, logged, and skipped
 - Pipeline continues with successful results
 - Graceful degradation at indicator level
 
 **3. Provider Fetch:**
+
 ```python
 @retry(stop=stop_after_attempt(5), wait=wait_exponential(...), reraise=True)
 async def fetch_data(...):
     # Make request
 ```
+
 - Retry with exponential backoff (5 attempts)
 - Re-raises last exception after all attempts
 - **F-003:** No circuit breaker for repeated failures
 
 **4. Database Operations:**
+
 ```python
 try:
     # DB operation
@@ -941,6 +981,7 @@ except (PoolTimeout, PoolClosed, OperationalError) as e:
     logger.error("... %s", e)
     raise SystemExit(1)
 ```
+
 - **F-004:** All DB errors cause immediate process exit
 - No retry or recovery mechanism
 
@@ -958,20 +999,22 @@ except (PoolTimeout, PoolClosed, OperationalError) as e:
 ### Concurrency Model
 
 **Global:**
+
 - Asyncio-based throughout
 - Non-blocking I/O for HTTP and database
 - Concurrent execution at indicator level
 
 **Per-Provider Concurrency Control:**
 
-| Provider | Semaphore Size | Additional Limits |
-|---------|---------------|------------------|
-| BLS | 5 | Daily quota (500 requests) |
-| FRED | 5 | None |
-| BEA | 5 | Random delay (1-5s between requests) |
-| ONS | 1 | Random delay (10-15s between downloads) |
+| Provider | Semaphore Size | Additional Limits                       |
+| -------- | -------------- | --------------------------------------- |
+| BLS      | 5              | Daily quota (500 requests)              |
+| FRED     | 5              | None                                    |
+| BEA      | 5              | Random delay (1-5s between requests)    |
+| ONS      | 1              | Random delay (10-15s between downloads) |
 
 **Implementation:**
+
 ```python
 # In provider __init__
 self.semaphore = asyncio.Semaphore(limit_requests)
@@ -982,6 +1025,7 @@ async with self.semaphore:
 ```
 
 **Shared State for Rate Limits:**
+
 ```python
 # providers/share_state.py
 shared_state: dict[str, asyncio.Event] = {}
@@ -993,11 +1037,13 @@ class ExternalLimit:
             shared_state[provider] = asyncio.Event()
         return shared_state[provider]
 ```
+
 - Used by BLS to signal daily quota exhaustion
 - Event set when "daily threshold" message received
 - All subsequent requests check event and skip if set
 
 **Database Connection Pool:**
+
 - min_size=1, max_size=7 connections
 - max_waiting=30 (max tasks waiting for connection)
 - timeout=10 seconds
@@ -1008,6 +1054,7 @@ class ExternalLimit:
 **Library:** Tenacity
 
 **Configuration:**
+
 ```python
 @retry(
     stop=stop_after_attempt(5),
@@ -1018,6 +1065,7 @@ class ExternalLimit:
 ```
 
 **Retryable Conditions:**
+
 ```python
 class Retryable:
     def __call__(self, error: BaseException) -> bool:
@@ -1026,7 +1074,7 @@ class Retryable:
                 return True
             if error.status == 429:  # Rate limited
                 return True
-        if isinstance(error, (aiohttp.ClientConnectionError, 
+        if isinstance(error, (aiohttp.ClientConnectionError,
                               aiohttp.ServerTimeoutError)):
             return True
         if isinstance(error, exc.RateLimit):
@@ -1036,12 +1084,12 @@ class Retryable:
 
 ### Rate Limiting Strategies
 
-| Provider | Strategy |
-|---------|----------|
-| BLS | Semaphore(5) + Daily quota tracking + Shared event + Exponential backoff retry |
-| FRED | Semaphore(5) + Exponential backoff retry |
-| BEA | Semaphore(5) + Random delay (1-5s) + Exponential backoff retry |
-| ONS | Semaphore(1) + Random delay (10-15s) + Exponential backoff retry + ETag |
+| Provider | Strategy                                                                       |
+| -------- | ------------------------------------------------------------------------------ |
+| BLS      | Semaphore(5) + Daily quota tracking + Shared event + Exponential backoff retry |
+| FRED     | Semaphore(5) + Exponential backoff retry                                       |
+| BEA      | Semaphore(5) + Random delay (1-5s) + Exponential backoff retry                 |
+| ONS      | Semaphore(1) + Random delay (10-15s) + Exponential backoff retry + ETag        |
 
 ---
 
@@ -1050,6 +1098,7 @@ class Retryable:
 ### Purpose
 
 Preserve raw vintage data to enable:
+
 1. **Point-in-time analysis:** Reconstruct data as it was at any historical date
 2. **Revision tracking:** Identify when and how data was revised
 3. **Auditability:** Full traceability from raw response to final output
@@ -1058,12 +1107,14 @@ Preserve raw vintage data to enable:
 ### Implementation
 
 **API Providers:**
+
 - Store full JSON response in `raw_respons_api.payload`
 - Generate SHA-256 checksum of response
 - Deduplicate using checksum (ON CONFLICT DO NOTHING)
 - Include metadata in payload (country, category, indicator, source, code_name, etc.)
 
 **File Providers:**
+
 - Download files to local filesystem
 - Store file path in `file_registry.file_path`
 - Track ETag for HTTP cache validation
@@ -1071,13 +1122,13 @@ Preserve raw vintage data to enable:
 
 ### Storage Characteristics
 
-| Aspect | API Providers | File Providers |
-|--------|---------------|----------------|
-| Storage | JSONB column | Filesystem + TEXT column |
-| Deduplication | Checksum | ETag + file_path |
-| Size | Response size | File size |
-| Queryability | JSON functions | Join with file_registry |
-| Immutability | Yes | Yes |
+| Aspect        | API Providers  | File Providers           |
+| ------------- | -------------- | ------------------------ |
+| Storage       | JSONB column   | Filesystem + TEXT column |
+| Deduplication | Checksum       | ETag + file_path         |
+| Size          | Response size  | File size                |
+| Queryability  | JSON functions | Join with file_registry  |
+| Immutability  | Yes            | Yes                      |
 
 ### Data Growth
 
@@ -1093,6 +1144,7 @@ Preserve raw vintage data to enable:
 ### Purpose
 
 Transform heterogeneous raw data into unified, queryable format for:
+
 1. **Standardization:** Consistent schema across all providers
 2. **Query performance:** Optimized for time series queries
 3. **Data quality:** Validated and cleaned data
@@ -1101,11 +1153,13 @@ Transform heterogeneous raw data into unified, queryable format for:
 ### Implementation
 
 **Transformation Process:**
+
 1. Parse raw data to ParsedItems (date_key, value, footnotes)
 2. Convert to StagingItems with full context (country, category, source, etc.)
 3. Insert into staging_indicators with UPSERT
 
 **Schema Design:**
+
 - Date as primary dimension (DATE type)
 - Year extracted for fast filtering (INTEGER)
 - Source, code, indicator for identification
@@ -1115,6 +1169,7 @@ Transform heterogeneous raw data into unified, queryable format for:
 - Footnotes as JSONB for flexibility
 
 **UPSERT Strategy:**
+
 ```sql
 ON CONFLICT (date, source, code, country, frequency)
 DO UPDATE SET
@@ -1122,6 +1177,7 @@ DO UPDATE SET
     footnotes_note = EXCLUDED.footnotes_note,
     processed = EXCLUDED.processed
 ```
+
 - Updates value and metadata if same date/source/code/country/frequency
 - Preserves load_at from original insert
 - Enables re-processing with updated parsers
@@ -1132,20 +1188,20 @@ DO UPDATE SET
 
 ### Status
 
-**UNVERIFIED - U-002:** dbt project exists but not integrated with Python pipeline
-
 **Location:** `transforms/` directory
 
 **Contents:**
+
 - `dbt_project.yml` - dbt configuration
 - `profiles.yml` - Database connection profiles
 - `models/marts/final_data.sql` - Single model
 - `models/marts/schema.yml` - Schema definition
 
 **Observations:**
+
 - No calls from Python code to dbt commands
 - dbt appears to be separate workflow
-- Final transformations may happen outside Python pipeline
+- Final transformations outside Python pipeline
 
 ---
 
@@ -1156,6 +1212,7 @@ DO UPDATE SET
 **Command:** `python extract/src/main.py --list`
 
 **Behavior:**
+
 - Print all available indicators organized by country/category
 - No data fetching or processing
 - Read-only operation
@@ -1169,6 +1226,7 @@ DO UPDATE SET
 **Command:** `python extract/src/main.py --stage fetch [--source SOURCE] [--country COUNTRY] [--name INDICATOR] [--persist-raw]`
 
 **Behavior:**
+
 - Fetch raw data from all configured providers
 - Concurrent execution for all indicators
 - Optionally persist to database with `--persist-raw`
@@ -1183,6 +1241,7 @@ DO UPDATE SET
 **Command:** `python extract/src/main.py --stage parse [--source SOURCE] [--country COUNTRY] [--name INDICATOR] [--persist-stg]`
 
 **Behavior:**
+
 - Read raw data from database (raw_respons_api and file_registry)
 - Parse using registered parsers
 - Optionally persist to staging with `--persist-stg`
@@ -1197,6 +1256,7 @@ DO UPDATE SET
 **Command:** `python extract/src/main.py --stage all [--source SOURCE] [--country COUNTRY] [--name INDICATOR]`
 
 **Behavior:**
+
 - Fetch raw data (always persists to DB, regardless of flags)
 - Load raw data to raw_respons_api/file_registry
 - Parse raw data
@@ -1213,6 +1273,7 @@ DO UPDATE SET
 **Command:** `python extract/src/main.py --stage replay [--source SOURCE] [--country COUNTRY] [--name INDICATOR]`
 
 **Behavior:**
+
 - Read raw data from database (same as parse)
 - Export to JSON files on disk
 - Files saved to `exported_data/{country}/{name}_{uniq}_{timestamp}.json`
@@ -1224,13 +1285,14 @@ DO UPDATE SET
 
 ### Filter Options
 
-| Filter | Description | Valid with Stages |
-|--------|-------------|-------------------|
-| `--source bls|fred|bea|ons` | Filter by provider | fetch, parse, all, replay |
-| `--country usa|uk` | Filter by country | fetch, parse, all, replay |
+| Filter             | Description              | Valid with Stages         |
+| ------------------ | ------------------------ | ------------------------- |
+| `--source bls      | fred                     | bea                       | ons`                      | Filter by provider | fetch, parse, all, replay |
+| `--country usa     | uk`                      | Filter by country         | fetch, parse, all, replay |
 | `--name INDICATOR` | Filter by indicator name | fetch, parse, all, replay |
 
 **Mutual Exclusivity:**
+
 - `--source` cannot be used with `--country` or `--name`
 - `--name` requires `--country`
 
@@ -1280,69 +1342,3 @@ DO UPDATE SET
 - **Database level:** No retry - errors cause immediate exit
 
 ---
-
-## 20. CONCRETE FINDINGS
-
-See codebase_tracing.md for detailed findings (F-001 through F-010)
-
-**Summary of High-Impact Findings:**
-
-| ID | Severity | Issue | Impact |
-|----|----------|-------|--------|
-| F-001 | HIGH | Non-PipelineCrash exceptions not caught in main() | Unhandled errors, confusing messages |
-| F-002 | MEDIUM | Sequential provider session opening | Startup bottleneck |
-| F-003 | MEDIUM | No circuit breaker for provider failures | Repeated failures waste resources |
-| F-004 | MEDIUM | DB errors cause immediate exit | No graceful degradation |
-| F-006 | LOW | Connection pool fixed at 7 | May become bottleneck at scale |
-| F-007 | LOW | ONS concurrency limited to 1 | Slow file downloads |
-
----
-
-## 21. KNOWN LIMITATIONS
-
-### Architectural Limitations
-
-1. **Dual Parser Architecture:** API and file-based parsers use different routing mechanisms (PARSE_REGISTER vs route_task)
-2. **No Plugin System:** Providers and parsers hardcoded, not extensible without code changes
-3. **Fixed Concurrency:** Semaphore sizes and pool sizes hardcoded
-4. **No Circuit Breakers:** No protection against cascading failures
-
-### Operational Limitations
-
-1. **Startup Time:** Sequential session opening for providers
-2. **Error Handling:** DB errors cause full pipeline stop
-3. **Logging:** Only to stdout, no file logging or log aggregation
-4. **Monitoring:** No metrics collection or monitoring integration
-
-### Data Limitations
-
-1. **No Retention Policy:** Raw data accumulated indefinitely
-2. **No Archival:** No mechanism for moving old data to cold storage
-3. **No Partitioning:** Tables not partitioned by date or other dimension
-
-### Scalability Limitations
-
-1. **Memory:** All metadata loaded at startup (ALL_INDICATORS global)
-2. **Concurrency:** Fixed limits may not scale
-3. **Database:** Connection pool size fixed, may need scaling
-
----
-
-## 22. UNKNOWN/UNVERIFIED BEHAVIOR
-
-See codebase_tracing.md for detailed unverified items (U-001 through U-006)
-
-**Summary:**
-
-| ID | Question | Status |
-|----|---------|--------|
-| U-001 | Exact indicator count | Partial (~50-60) |
-| U-002 | dbt integration | Unknown |
-| U-003 | Actual API rate limits | Unknown (only BLS coded) |
-| U-004 | Runtime performance | Unknown |
-| U-005 | Database size | Unknown |
-| U-006 | dbt production usage | Unknown |
-
----
-
-*Document describes implementation AS-IS from codebase verification.*

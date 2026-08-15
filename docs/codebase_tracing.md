@@ -1,7 +1,6 @@
 # Codebase Tracing - Macro Data Pipeline
 
 **AS-IS Runtime Tracing Document**  
-**Repository**: /home/arzswdy/sys/service/pipeline  
 **Entrypoint**: `extract/src/main.py`  
 **Version**: Current HEAD (1e0d272)  
 **Date**: 2026-08-14
@@ -23,8 +22,6 @@
 11. [MODEL LAYER](#11-model-layer)
 12. [CONFIGURATION AND METADATA](#12-configuration-and-metadata)
 13. [ERROR HANDLING](#13-error-handling)
-14. [CONCRETE FINDINGS](#14-concrete-findings)
-15. [UNVERIFIED INFORMATION](#15-unverified-information)
 
 ---
 
@@ -35,6 +32,7 @@
 **File:** `extract/src/main.py`
 
 **Import-time side effects:**
+
 - `ALL_INDICATORS = load_all_indicator()` - Loads all YAML metadata at module import
 - Logger initialization via standard logging module
 
@@ -85,16 +83,16 @@ python extract/src/main.py
 
 ### Complete Argument Table
 
-| Option | Short | Type | Default | Required | Choices | Destination | Validation | Runtime Effect | Downstream Consumer |
-|--------|-------|------|---------|----------|---------|-------------|------------|----------------|-------------------|
-| `--list` | N/A | flag | False | No | N/A | `args.list` | If True, print indicators and exit | Exit with SystemExit(0) | `list_of_indicators()` |
-| `-l, --log-level` | `-l` | choice | "info" | No | debug, info, warning, error, critical | `args.log_level` | Must be valid level | Sets logging level | `apply_log_level()` |
-| `-c, --country` | `-c` | string | None | No | N/A | `args.country` | Validated with `valid_input()` | Filter by country | FlowsManager methods |
-| `-n, --name` | `-n` | string | None | No | N/A | `args.name` | Validated with `valid_input()` | Filter by indicator | FlowsManager methods |
-| `--source` | N/A | nargs+" | None | No | bls, bea, fred, ons | `args.source` | Cannot be used with --country or --name | Filter by source | FlowsManager methods |
-| `--stage` | N/A | choice | "all" | No | fetch, parse, all, replay | `args.stage` | Incompatible with persist flags for replay | Stage selection | PipelineRunner.runner() |
-| `--persist-raw` | N/A | flag | False | No | N/A | `args.persist_raw` | Only valid with stage=fetch | Persist raw data | `orchest_all_fetch()` |
-| `--persist-stg` | N/A | flag | False | No | N/A | `args.persist_stg` | Only valid with stage=parse | Persist staging data | `parsing_all_db()` |
+| Option            | Short | Type    | Default | Required | Choices                               | Destination        | Validation                                 | Runtime Effect          | Downstream Consumer     |
+| ----------------- | ----- | ------- | ------- | -------- | ------------------------------------- | ------------------ | ------------------------------------------ | ----------------------- | ----------------------- |
+| `--list`          | N/A   | flag    | False   | No       | N/A                                   | `args.list`        | If True, print indicators and exit         | Exit with SystemExit(0) | `list_of_indicators()`  |
+| `-l, --log-level` | `-l`  | choice  | "info"  | No       | debug, info, warning, error, critical | `args.log_level`   | Must be valid level                        | Sets logging level      | `apply_log_level()`     |
+| `-c, --country`   | `-c`  | string  | None    | No       | N/A                                   | `args.country`     | Validated with `valid_input()`             | Filter by country       | FlowsManager methods    |
+| `-n, --name`      | `-n`  | string  | None    | No       | N/A                                   | `args.name`        | Validated with `valid_input()`             | Filter by indicator     | FlowsManager methods    |
+| `--source`        | N/A   | nargs+" | None    | No       | bls, bea, fred, ons                   | `args.source`      | Cannot be used with --country or --name    | Filter by source        | FlowsManager methods    |
+| `--stage`         | N/A   | choice  | "all"   | No       | fetch, parse, all, replay             | `args.stage`       | Incompatible with persist flags for replay | Stage selection         | PipelineRunner.runner() |
+| `--persist-raw`   | N/A   | flag    | False   | No       | N/A                                   | `args.persist_raw` | Only valid with stage=fetch                | Persist raw data        | `orchest_all_fetch()`   |
+| `--persist-stg`   | N/A   | flag    | False   | No       | N/A                                   | `args.persist_stg` | Only valid with stage=parse                | Persist staging data    | `parsing_all_db()`      |
 
 ### Validation Rules
 
@@ -181,6 +179,7 @@ _fetch.py:orchest_all_fetch()
 ```
 
 **Side Effects:**
+
 - Opens HTTP sessions for all providers
 - Concurrent HTTP requests/downloads
 - Writes to DB if persist_raw=True
@@ -236,6 +235,7 @@ _parser.py:parsing_all_db()
 ```
 
 **Side Effects:**
+
 - Reads from raw_respons_api and file_registry
 - Parses data using registered parsers
 - Writes to staging_indicators if persist_stg=True
@@ -265,6 +265,7 @@ _chain.py:run_all_chain()
 ```
 
 **Side Effects:**
+
 - Combines fetch, load raw, parse, load staging
 - **Always persists raw** (unlike --stage fetch which respects --persist-raw)
 - **Always persists staging**
@@ -295,6 +296,7 @@ _fetch.py:replaying_raw_data()
 ```
 
 **Side Effects:**
+
 - Reads from DB (same as parse)
 - **Writes JSON files to disk**
 - Does NOT persist to staging
@@ -374,16 +376,16 @@ self.providerd = {
 
 ### Provider Comparison
 
-| Aspect | BLS | FRED | BEA | ONS |
-|--------|-----|------|-----|-----|
-| Type | API | API | API | File |
-| HTTP Method | POST | GET | GET | GET |
-| Concurrency Limit | Semaphore(5) | Semaphore(5) | Semaphore(5) | Semaphore(1) |
-| Rate Limiting | Daily quota (500) | None | Random delay | ETag + delay |
-| Retry | Yes (tenacity) | Yes (tenacity) | Yes (tenacity) | Yes (tenacity) |
-| Auth | API Key | API Key | API Key | None |
-| Deduplication | None | None | None | ETag + file path |
-| Special | Daily request counter | None | Dataset/table params | File download |
+| Aspect            | BLS                   | FRED           | BEA                  | ONS              |
+| ----------------- | --------------------- | -------------- | -------------------- | ---------------- |
+| Type              | API                   | API            | API                  | File             |
+| HTTP Method       | POST                  | GET            | GET                  | GET              |
+| Concurrency Limit | Semaphore(5)          | Semaphore(5)   | Semaphore(5)         | Semaphore(1)     |
+| Rate Limiting     | Daily quota (500)     | None           | Random delay         | ETag + delay     |
+| Retry             | Yes (tenacity)        | Yes (tenacity) | Yes (tenacity)       | Yes (tenacity)   |
+| Auth              | API Key               | API Key        | API Key              | None             |
+| Deduplication     | None                  | None           | None                 | ETag + file path |
+| Special           | Daily request counter | None           | Dataset/table params | File download    |
 
 ---
 
@@ -417,12 +419,14 @@ Both paths converge at `FetchBatchResult(file=valid_path, apis=valid_data)` in `
 ### Concurrency Implementation
 
 **Per-Provider Semaphores:**
+
 - BLS: `asyncio.Semaphore(5)`
 - FRED: `asyncio.Semaphore(5)`
 - BEA: `asyncio.Semaphore(5)` + random delay (1-5s)
 - ONS: `asyncio.Semaphore(1)` + random delay (10-15s)
 
 **Global Shared State:**
+
 ```python
 # providers/share_state.py
 shared_state: dict[str, asyncio.Event] = {}
@@ -442,6 +446,7 @@ Used by BLS to signal daily quota exhaustion across all instances
 ### Retry Implementation
 
 **Using Tenacity:**
+
 ```python
 @retry(
     stop=stop_after_attempt(5),
@@ -452,6 +457,7 @@ Used by BLS to signal daily quota exhaustion across all instances
 ```
 
 **Retryable Errors:**
+
 - 5xx server errors
 - 429 rate limited
 - Connection errors
@@ -477,6 +483,7 @@ def register(providers: Providers, freq: Frequency):
 ```
 
 **Registered Parsers:**
+
 - `@register(Providers.bls, Frequency.monthly)` → parse_monthly_bls
 - `@register(Providers.fred, Frequency.monthly)` → parse_monthly_fred
 - `@register(Providers.fred, Frequency.weekly)` → parse_weekly_fred
@@ -484,18 +491,21 @@ def register(providers: Providers, freq: Frequency):
 - `@register(Providers.bea, Frequency.quarterly)` → parse_quarterly_bea
 
 **ONS Parsers:** NOT in registry - use separate `route_task()`:
+
 - CSV → parser_csv()
 - Excel → parser_excl()
 
 ### Input/Output Contract
 
 **API Parsers:**
+
 ```
 Input: ApiResult(source_data: dict, meta: FetchMeta)
 Output: ParseResult(parse_result: list[ParsedItems])
 ```
 
 **File Parsers:**
+
 ```
 Input: FileResult(file_path, file_ext, country, category, indicator, code_name, freq, ...)
 Output: list[ParsedItems] (via route_task → ParseResult)
@@ -508,15 +518,18 @@ Output: list[ParsedItems] (via route_task → ParseResult)
 ## 9. PROCESS LAYER
 
 ### RawProcessors
+
 - Orchestrates all provider data fetching
 - Manages provider lifecycle (sessions)
 - Transforms provider results to ApiResult/FileResult
 
 ### ParseProcessors
+
 - Routes API-based parsing through PARSE_REGISTER
 - Validates provider and frequency registration
 
 ### staging_result()
+
 - Transforms ParseResult to StagingData
 - Converts date_key (string) to date and year
 - Creates StagingItems for each parsed data point
@@ -528,16 +541,19 @@ Output: list[ParsedItems] (via route_task → ParseResult)
 ### Tables
 
 **1. raw_respons_api** - API raw data
+
 - `payload JSONB` - Full response + metadata + checksum
 - `load_at TIMESTAMPTZ`
 - Unique index on `(payload -> 'meta' ->> 'checksum')`
 
 **2. file_registry** - File download tracking
+
 - `file_path TEXT` - Local file path
 - `etag TEXT` - HTTP ETag
 - Unique on `(file_path, country, category, indicator)`
 
 **3. staging_indicators** - Processed data
+
 - `date DATE`, `year INTEGER`
 - `source TEXT`, `code TEXT`, `indicator TEXT`
 - `value NUMERIC(20,4)`
@@ -548,6 +564,7 @@ Output: list[ParsedItems] (via route_task → ParseResult)
 - Unique on `(date, source, code, country, frequency)`
 
 ### Connection Management
+
 - `AsyncConnectionPool(min_size=1, max_size=7)`
 - Each load method: creates connection → starts transaction → executes → commits
 - No cross-table transaction coordination
@@ -583,16 +600,19 @@ staging_indicators table
 ## 12. CONFIGURATION AND METADATA
 
 ### Environment
+
 - **Primary:** Supabase credentials (sb_user, sb_password, sb_host, sb_port, sb_database)
 - **Fallback:** Local PostgreSQL (commented out in settings.py)
 - **API Keys:** bls_api_key, fred_api_key, bea_api_key
 
 ### Metadata Structure
+
 - **Catalog:** `catalog.yaml` - Lists countries and their categories
 - **Per-category:** `usa/price.yaml`, `uk/labour.yaml`, etc. - Define indicators
 - **Model mapping:** MODEL_MAP = {bls: BLSConfigModel, bea: BEAConfigModel, fred: FREDConfigModel, ons: ONSConfigModel}
 
 ### Current Scope
+
 - **Countries:** 2 (usa, uk)
 - **Categories:** 6 (usa) + 5 (uk) = 11
 - **Indicators:** ~50-60 total across all categories
@@ -626,130 +646,20 @@ PipelineCrash
 
 ### Handling
 
-**main():** Catches only `PipelineCrash` → **F-001: Other exceptions not caught**
+**main():** Catches only `PipelineCrash` → **Other exceptions not caught**
 
-**fetch_config_indicators():** 
+**fetch_config_indicators():**
+
 - `asyncio.gather(return_exceptions=True)` → Individual failures captured in results
 - Logged and skipped, pipeline continues
 
-**Provider fetch_data():** 
+**Provider fetch_data():**
+
 - `@retry` with 5 attempts, exponential backoff
 - `reraise=True` → Last exception re-raised
 
 **Database methods:**
-- Catch specific DB exceptions → `SystemExit(1)` → **F-004: Immediate exit on DB error**
+
+- Catch specific DB exceptions → `SystemExit(1)` → **Immediate exit on DB error**
 
 ---
-
-## 14. CONCRETE FINDINGS
-
-### F-001: Non-PipelineCrash Exceptions Not Caught in main()
-- **Severity:** HIGH
-- **File:** main.py
-- **Function:** main()
-- **Evidence:** Only `except exc.PipelineCrash` - ValueError, TypeError, KeyError not caught
-- **Impact:** Unhandled exceptions propagate to asyncio.run() with unhelpful messages
-- **Scale impact:** Higher with more indicators
-
-### F-002: Sequential Provider Session Opening is a Bottleneck
-- **Severity:** MEDIUM
-- **File:** core/process/raw.py
-- **Function:** RawProcessors.__aenter__()
-- **Evidence:** TODO comment acknowledges this is a bottleneck
-- **Impact:** Startup time scales linearly with providers
-- **Scale impact:** With many providers, startup slow
-
-### F-003: No Circuit Breaker for Provider Failures
-- **Severity:** MEDIUM
-- **File:** All provider fetch.py
-- **Evidence:** Only retry with max 5 attempts, no circuit breaker
-- **Impact:** Repeated failures to same provider for each indicator
-- **Scale impact:** More significant with many indicators per provider
-
-### F-004: Database Errors Cause Immediate Process Exit
-- **Severity:** MEDIUM
-- **File:** upload/postgres/*.py
-- **Evidence:** All DB errors raise SystemExit(1)
-- **Impact:** Single DB error stops entire pipeline
-- **Scale impact:** Less graceful degradation at scale
-
-### F-005: ONS Parsers Not in PARSE_REGISTER
-- **Severity:** LOW
-- **File:** core/parsers/ons/tasks.py
-- **Evidence:** Separate route_task() function instead of registry
-- **Impact:** Architectural inconsistency
-- **Scale impact:** Maintenance burden
-
-### F-006: Connection Pool Size Fixed at 7
-- **Severity:** LOW
-- **File:** main.py
-- **Evidence:** max_size=7 hardcoded
-- **Impact:** May become bottleneck
-- **Scale impact:** With 200 countries, may need larger pool
-
-### F-007: ONS Download Concurrency Limited to 1
-- **Severity:** LOW
-- **File:** providers/ons/fetch.py
-- **Evidence:** Semaphore(1) for ONS
-- **Impact:** Sequential downloads for ONS
-- **Scale impact:** Many ONS indicators = slow downloads
-
-### F-008: Default Stage is "all" Which Always Persists
-- **Severity:** INFO
-- **File:** main.py
-- **Evidence:** default="all"
-- **Impact:** Running without args always fetches and persists everything
-
-### F-009: Mixed Case Sensitivity in Filtering
-- **Severity:** LOW
-- **File:** core/flows/_utils.py
-- **Function:** aplay_filters()
-- **Evidence:** filter.country not lowercased in comparison
-- **Impact:** Case mismatch could cause filtering issues
-
-### F-010: run_all_chain Defined in Two Places
-- **Severity:** LOW
-- **File:** _chain.py and _fetch.py
-- **Evidence:** Code duplication
-- **Impact:** Maintenance burden
-
----
-
-## 15. UNVERIFIED INFORMATION
-
-| ID | Question | Status | Notes |
-|----|---------|--------|-------|
-| U-001 | Exact total number of indicators | PARTIAL | ~50-60 estimated from YAML files |
-| U-002 | dbt model relationships | UNKNOWN | dbt files exist but not traced |
-| U-003 | Actual API rate limits | UNKNOWN | Only BLS coded limit (500/day) |
-| U-004 | Actual runtime performance | UNKNOWN | Would need benchmarking |
-| U-005 | Database current size | UNKNOWN | Would need DB inspection |
-| U-006 | Whether dbt is used in production | UNKNOWN | No calls from Python code |
-
----
-
-## DOCUMENT STATUS
-
-| Section | Status | Coverage |
-|---------|--------|----------|
-| Execution Entrypoint | COMPLETE | 100% |
-| CLI Argument Matrix | COMPLETE | 100% |
-| CLI Path Traces | COMPLETE | 100% |
-| Full Call Graph | COMPLETE | 100% |
-| Provider Layer | COMPLETE | 100% |
-| API vs File Providers | COMPLETE | 100% |
-| Rate Limiting/Concurrency | COMPLETE | 100% |
-| Parser Layer | COMPLETE | 100% |
-| Process Layer | COMPLETE | 100% |
-| Database/Load Layer | COMPLETE | 100% |
-| Model Layer | COMPLETE | 100% |
-| Configuration/Metadata | COMPLETE | 100% |
-| Error Handling | COMPLETE | 100% |
-| Concrete Findings | COMPLETE | 100% |
-| Unverified | COMPLETE | 100% |
-
-**Overall Tracing Coverage:** 100% for verified paths
-
----
-
-*Document generated from codebase analysis. All statements verifiable from source code unless marked UNKNOWN.*

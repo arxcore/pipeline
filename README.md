@@ -9,23 +9,27 @@ An automated pipeline designed to extract, normalize, and store macroeconomic in
 ## Current Scope
 
 ### Countries
+
 - **2 countries:** United States (`usa`), United Kingdom (`uk`)
 
 ### Data Sources / Providers
+
 | Provider | Type | Agency | Coverage |
-|---------|------|--------|----------|
+| --------- | ------ | -------- | ---------- |
 | **BLS** | REST API | Bureau of Labor Statistics | US economic data |
 | **FRED** | REST API | Federal Reserve Economic Data | US economic data |
 | **BEA** | REST API | Bureau of Economic Analysis | US economic data |
 | **ONS** | File Download | Office for National Statistics | UK economic data |
 
 ### Indicators
+
 - **Approximate count:** 50-60 indicators total across all categories
 - **Categories:**
   - **USA:** price, labour, trade, money, consumer, business (6 categories)
   - **UK:** price, labour, consumer, business, trade (5 categories)
 
 ### Frequencies Supported
+
 - Monthly (most common)
 - Weekly (FRED only)
 - Quarterly (BEA)
@@ -109,6 +113,7 @@ The pipeline employs a **dual-path architecture** to handle API-based and file-b
 ## Data Flow
 
 ### Stage 1: FETCH
+
 ```
 Metadata -> Provider Selection -> HTTP Request/Download -> Validation -> Raw Storage
 ```
@@ -119,6 +124,7 @@ Metadata -> Provider Selection -> HTTP Request/Download -> Validation -> Raw Sto
 - **Deduplication:** API (checksum-based), File (ETag + file_path based)
 
 ### Stage 2: PARSE
+
 ```
 Query DB -> Parser Dispatch -> Date/Value Extraction -> Standardization -> Staging Data
 ```
@@ -128,9 +134,11 @@ Query DB -> Parser Dispatch -> Date/Value Extraction -> Standardization -> Stagi
 - **Output:** Unified `ParseResult` with standardized `ParsedItems(date_key, value, footnotes)`
 
 ### Stage 3: ALL (FETCH + PARSE)
+
 Combines fetch and parse stages, **always persists** both raw and staging data.
 
 ### Stage 4: REPLAY
+
 ```
 Query DB -> Export to JSON -> Save to exported_data/{country}/{name}_{timestamp}.json
 ```
@@ -200,7 +208,7 @@ pipeline/
 ## Tech Stack
 
 | Category | Technology |
-|----------|------------|
+| ---------- | ------------ |
 | **Language** | Python 3.11+ (async/await) |
 | **Dependency Mgmt** | Poetry |
 | **Data Processing** | Polars, Calamine |
@@ -216,6 +224,7 @@ pipeline/
 ## Installation
 
 ### Prerequisites
+
 - Python 3.11+
 - PostgreSQL 15+
 - Poetry (recommended)
@@ -236,6 +245,7 @@ cp .env.example .env
 ```
 
 **Environment Variables:**
+
 ```bash
 # Supabase (primary - used in production)
 SB_USER=your_supabase_user
@@ -273,6 +283,7 @@ config/metadata/
 ```
 
 **Example indicator (usa/price.yaml):**
+
 ```yaml
 CPI_YoY:
   code_name: "CUUR0000SA0"
@@ -302,6 +313,7 @@ Core_PCE_MoM:
 ## CLI Usage
 
 ### Entry Point
+
 ```bash
 python extract/src/main.py [OPTIONS]
 ```
@@ -309,7 +321,7 @@ python extract/src/main.py [OPTIONS]
 ### Main Options
 
 | Option | Description |
-|--------|-------------|
+| -------- | ------------- |
 | `--list` | List all available indicators and exit |
 | `-l, --log-level {debug,info,warning,error,critical}` | Set logging level (default: info) |
 | `-c, --country COUNTRY` | Filter by country (usa, uk) |
@@ -322,26 +334,31 @@ python extract/src/main.py [OPTIONS]
 ### Examples
 
 #### List available indicators
+
 ```bash
 python extract/src/main.py --list
 ```
 
 #### Fetch raw data only (no persistence)
+
 ```bash
 python extract/src/main.py --stage fetch
 ```
 
 #### Fetch and persist raw data
+
 ```bash
 python extract/src/main.py --stage fetch --persist-raw
 ```
 
 #### Parse existing raw data to staging
+
 ```bash
 python extract/src/main.py --stage parse --persist-stg
 ```
 
 #### Full pipeline: Fetch + Persist Raw + Parse + Persist Staging
+
 ```bash
 python extract/src/main.py --stage all
 ```
@@ -349,11 +366,13 @@ python extract/src/main.py --stage all
 **Note:** `--stage all` ALWAYS persists both raw and staging data, regardless of flags.
 
 #### Run for specific country
+
 ```bash
 python extract/src/main.py --country usa --stage all
 ```
 
 #### Run for specific indicator
+
 ```bash
 python extract/src/main.py --country usa --name CPI_YoY --stage all
 ```
@@ -361,6 +380,7 @@ python extract/src/main.py --country usa --name CPI_YoY --stage all
 **Note:** When using `--name`, you must also specify `--country`.
 
 #### Run for specific source(s)
+
 ```bash
 python extract/src/main.py --source bls fred --stage fetch
 ```
@@ -368,6 +388,7 @@ python extract/src/main.py --source bls fred --stage fetch
 **Note:** Cannot combine `--source` with `--country` or `--name`.
 
 #### Export raw data from database to JSON
+
 ```bash
 python extract/src/main.py --stage replay --country usa
 ```
@@ -389,6 +410,7 @@ Exports to: `exported_data/{country}/{name}_{uniq}_{timestamp}.json`
 Standardized time series data in `staging_indicators` table with composite unique key.
 
 **Schema:**
+
 ```sql
 staging_indicators (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -418,8 +440,9 @@ staging_indicators (
 ## Concurrency & Retry
 
 ### Concurrency Limits
+
 | Provider | Semaphore Size | Additional |
-|---------|---------------|-----------|
+| --------- | --------------- | ----------- |
 | BLS | 5 | Daily quota (500) |
 | FRED | 5 | None |
 | BEA | 5 | Random delay (1-5s) |
@@ -428,6 +451,7 @@ staging_indicators (
 **Database:** Connection pool (min=1, max=7)
 
 ### Retry Mechanism
+
 - **Library:** Tenacity
 - **Attempts:** 5 max
 - **Backoff:** Exponential (multiplier=2, min=2-4s, max=60-70s)
@@ -438,6 +462,7 @@ staging_indicators (
 ## Error Handling
 
 ### Exception Hierarchy
+
 ```
 PipelineCrash
     ├── ProcessingFailed (RoutingError, ResultsNotFound, FormatError)
@@ -448,8 +473,9 @@ PipelineCrash
 ```
 
 ### Behavior
+
 | Error | Handling |
-|-------|----------|
+| ------- | ---------- |
 | Individual indicator failure | Logged, counted, skipped - pipeline continues |
 | Provider session failure | Logged, raises exception |
 | Database error | **SystemExit(1)** - pipeline stops |
@@ -462,7 +488,7 @@ PipelineCrash
 The pipeline is **idempotent** - safe to re-run multiple times:
 
 | Stage | Mechanism | Result on Re-run |
-|-------|----------|-----------------|
+| ------- | ---------- | ----------------- |
 | Fetch (API) | Checksum dedup | Same: skipped; Changed: new row |
 | Fetch (File) | ETag + path dedup | Same: skipped; Changed: re-download |
 | Parse | UPSERT | Same key: update value; Different: new row |
@@ -471,82 +497,57 @@ The pipeline is **idempotent** - safe to re-run multiple times:
 
 ## Development Status
 
-### Implemented
-- [x] Async fetch layer with aiohttp
-- [x] Multi-provider support (BLS, FRED, BEA, ONS)
-- [x] Raw JSONB persistence with checksum dedup
-- [x] File download with ETag dedup
-- [x] Parser registry for API providers
-- [x] File parser routing (CSV, Excel with Calamine)
-- [x] Polars-based parsing
-- [x] Pydantic-based data validation
-- [x] Tenacity-based retry with exponential backoff
-- [x] Connection pooling
-- [x] CLI with multiple stages and filters
-- [x] Custom exception hierarchy
-
-### Planned
-- [ ] Database-backed metadata (replace YAML)
-- [ ] Circuit breaker for provider failures
-- [ ] Progress tracking and resume capability
-- [ ] Graceful DB error handling
-- [ ] Increased ONS concurrency
-- [ ] API batching for BLS
-- [ ] Metrics collection (Prometheus)
-- [ ] Scheduling (Airflow/Prefect)
-- [ ] Data retention policy
-- [ ] Table partitioning
+- Async fetch layer with aiohttp
+- Multi-provider support (BLS, FRED, BEA, ONS)
+- Raw JSONB persistence with checksum dedup
+- File download with ETag dedup
+- Parser registry for API providers
+- File parser routing (CSV, Excel with Calamine)
+- Polars-based parsing
+- Pydantic-based data validation
+- Tenacity-based retry with exponential backoff
+- Connection pooling
+- CLI with multiple stages and filters
+- Custom exception hierarchy
 
 ---
 
 ## Known Limitations
 
 ### Critical
+
 1. **BLS Quota:** Daily quota of 500 requests - will be exceeded at ~100 indicators
 2. **Exception Handling:** Non-PipelineCrash exceptions not caught in main()
 3. **DB Errors:** Database errors cause immediate pipeline exit
 4. **Connection Pool:** Fixed at 7 connections - bottleneck at scale
 
 ### Architectural
+
 1. Dual parser architecture (API vs file-based routing inconsistency)
 2. No plugin system (providers hardcoded)
 3. Sequential provider session opening
 4. No circuit breakers
 
 ### Scalability
+
 1. ONS downloads sequential with delays
 2. Metadata loaded entirely at startup
 3. No retention policy for raw data
 
 ---
 
-## Scaling to 200 Countries
+## Scaling Considerations
 
-### Current: 2 countries, ~50-60 indicators, ~1-2 minutes per run
-### Target: 200 countries, ~5000-6000 indicators
+The current implementation covers 2 countries and ~50-60 indicators. The architecture was designed with expansion toward 200+ countries (~5,000-6,000 indicators) in mind, but the current implementation has only been tested against the present provider and country scope.
 
-### Bottlenecks Identified
-- **BLS Quota:** 500 requests/day - will be exhausted
-- **ONS Downloads:** Sequential with 10-15s delays - very slow
-- **DB Connections:** Pool size of 7 - may become bottleneck
-- **Error Handling:** Pipeline stops on DB error
+The pipeline supports this through:
 
-### Required Changes
-See [scale_optimisasi.md](scale_optimisasi.md) for complete scaling analysis.
+- Async-first provider ingestion
+- Database connection pooling
+- Idempotent fetch and staging operations
+- A modular provider/parser architecture
 
-**Priority 0 (Before 200 countries):**
-- Fix exception handling
-- Increase DB connection pool (7 → 20-50)
-- Add graceful DB error handling
-- Parallelize provider session opening
-- Implement quota tracking for all providers
-- Increase ONS concurrency
-- Add metrics/monitoring
-
-**Priority 1 (Strongly recommended):**
-- Add circuit breaker
-- Add progress tracking and resume
-- Add scheduling (Airflow/Prefect)
+The main areas identified for a larger expansion are provider concurrency and quota management, database write throughput, progress tracking and resumability, failure isolation, and metadata management.
 
 ---
 
@@ -556,7 +557,6 @@ See [scale_optimisasi.md](scale_optimisasi.md) for complete scaling analysis.
 |----------|-------------|
 | [codebase_tracing.md](docs/codebase_tracing.md) | Complete AS-IS runtime tracing and execution analysis |
 | [documentasi_pipeline.md](docs/documentasi_pipeline.md) | Higher-level technical documentation |
-| [scale_optimisasi.md](docs/scale_optimisasi.md) | Scaling analysis and optimization roadmap |
 
 ---
 
